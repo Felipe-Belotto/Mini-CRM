@@ -1,10 +1,11 @@
 "use server";
 
 import { getCampaignsAction } from "@/features/campaigns/actions/campaigns";
-import { getLeadsAction } from "@/features/leads/actions/leads";
+import { getCustomFieldsAction } from "@/features/custom-fields/actions/custom-fields";
+import { getLeadsAction, getArchivedLeadsAction } from "@/features/leads/actions/leads";
 import { getWorkspaceMembersAction } from "@/features/workspaces/actions/members";
 import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
-import type { Campaign, KanbanStage, Lead, User } from "@/shared/types/crm";
+import type { Campaign, CustomField, KanbanStage, Lead, User } from "@/shared/types/crm";
 import { getLeadsCountByStage } from "../lib/metrics-utils";
 
 export interface DashboardMetrics {
@@ -122,6 +123,42 @@ export async function getCurrentWorkspaceUsersAction(): Promise<User[]> {
     }));
   } catch (error) {
     console.error("Error in getCurrentWorkspaceUsersAction:", error);
+    return [];
+  }
+}
+
+/**
+ * Server Action para buscar campos personalizados do workspace atual
+ */
+export async function getCurrentWorkspaceCustomFieldsAction(): Promise<CustomField[]> {
+  try {
+    const currentWorkspace = await getCurrentWorkspaceAction();
+
+    if (!currentWorkspace) {
+      return [];
+    }
+
+    return getCustomFieldsAction(currentWorkspace.id);
+  } catch (error) {
+    console.error("Error in getCurrentWorkspaceCustomFieldsAction:", error);
+    return [];
+  }
+}
+
+/**
+ * Server Action para buscar leads arquivados do workspace atual
+ */
+export async function getCurrentWorkspaceArchivedLeadsAction(): Promise<Lead[]> {
+  try {
+    const currentWorkspace = await getCurrentWorkspaceAction();
+
+    if (!currentWorkspace) {
+      return [];
+    }
+
+    return getArchivedLeadsAction(currentWorkspace.id);
+  } catch (error) {
+    console.error("Error in getCurrentWorkspaceArchivedLeadsAction:", error);
     return [];
   }
 }

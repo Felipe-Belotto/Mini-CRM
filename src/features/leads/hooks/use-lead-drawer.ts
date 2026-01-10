@@ -26,7 +26,6 @@ export function useLeadDrawer({ lead, campaigns }: UseLeadDrawerProps) {
     const field = customFields.find((f) => f.id === fieldId);
     if (!field) return undefined;
 
-    // Mapear campos conhecidos (temporário até backend)
     if (field.name.toLowerCase() === "segmento") {
       return lead.segment;
     }

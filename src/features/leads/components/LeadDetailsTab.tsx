@@ -7,7 +7,14 @@ import {
   Phone,
   LinkedinIcon,
 } from "lucide-react";
-import type { Lead, User as UserType } from "@/shared/types/crm";
+import { LEAD_ORIGINS, type Lead, type User as UserType } from "@/shared/types/crm";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { HorizontalEditableField } from "./HorizontalEditableField";
 import { MultiResponsibleSelect } from "./MultiResponsibleSelect";
 import type { CustomField } from "@/shared/types/crm";
@@ -108,6 +115,31 @@ export function LeadDetailsTab({
         type="text"
         placeholder="Nome da empresa"
       />
+
+      <div className="flex items-center gap-3 py-2">
+        <label className="text-sm font-medium text-muted-foreground min-w-[140px]">
+          Origem
+        </label>
+        <div className="flex-1">
+          <Select
+            value={lead.origin || ""}
+            onValueChange={async (value) => {
+              await onUpdate(lead.id, { origin: value || undefined });
+            }}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Selecione a origem" />
+            </SelectTrigger>
+            <SelectContent>
+              {LEAD_ORIGINS.map((o) => (
+                <SelectItem key={o.id} value={o.id}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {lead.linkedIn && (
         <HorizontalEditableField

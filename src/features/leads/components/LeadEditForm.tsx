@@ -11,7 +11,7 @@ import {
 import { AvatarUpload } from "@/shared/components/ui/avatar-upload";
 import { useToast } from "@/shared/hooks/use-toast";
 import type { Lead, User as UserType } from "@/shared/types/crm";
-import { ResponsibleSelect } from "./ResponsibleSelect";
+import { MultiResponsibleSelect } from "./MultiResponsibleSelect";
 import { EditableField } from "./EditableField";
 import { CustomFieldInput } from "@/features/custom-fields/components/CustomFieldInput";
 import type { CustomField } from "@/shared/types/crm";
@@ -163,15 +163,12 @@ export function LeadEditForm({
         placeholder="Nome da empresa"
       />
 
-      <ResponsibleSelect
-        value={lead.responsibleId}
-        onChange={async (value) => {
-          await onUpdate(lead.id, {
-            responsibleId: value || undefined,
-          });
+      <MultiResponsibleSelect
+        value={lead.responsibleIds}
+        onChange={async (responsibleIds) => {
+          await onUpdate(lead.id, { responsibleIds });
         }}
         users={users}
-        readonly
       />
 
       <EditableField

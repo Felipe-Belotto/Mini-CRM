@@ -107,62 +107,74 @@ export type Database = {
       }
       leads: {
         Row: {
+          archived_at: string | null
           avatar_url: string | null
           campaign_id: string | null
-          position: string
+          company: string
           created_at: string
           custom_fields: Json | null
           email: string
-          company: string
-          revenue: string | null
           id: string
           linkedin: string | null
+          messages: string | null
           name: string
           notes: string | null
-          responsible_id: string | null
-          segment: string | null
-          stage: string
+          origin: string | null
           phone: string
+          position: string
+          responsible_id: string | null
+          revenue: string | null
+          segment: string | null
+          sort_order: number
+          stage: string
           updated_at: string
           workspace_id: string
         }
         Insert: {
+          archived_at?: string | null
           avatar_url?: string | null
           campaign_id?: string | null
-          position: string
+          company: string
           created_at?: string
           custom_fields?: Json | null
           email: string
-          company: string
-          revenue?: string | null
           id?: string
           linkedin?: string | null
+          messages?: string | null
           name: string
           notes?: string | null
-          responsible_id?: string | null
-          segment?: string | null
-          stage?: string
+          origin?: string | null
           phone: string
+          position: string
+          responsible_id?: string | null
+          revenue?: string | null
+          segment?: string | null
+          sort_order?: number
+          stage?: string
           updated_at?: string
           workspace_id: string
         }
         Update: {
+          archived_at?: string | null
           avatar_url?: string | null
           campaign_id?: string | null
-          position?: string
+          company?: string
           created_at?: string
           custom_fields?: Json | null
           email?: string
-          company?: string
-          revenue?: string | null
           id?: string
           linkedin?: string | null
+          messages?: string | null
           name?: string
           notes?: string | null
-          responsible_id?: string | null
-          segment?: string | null
-          stage?: string
+          origin?: string | null
           phone?: string
+          position?: string
+          responsible_id?: string | null
+          revenue?: string | null
+          segment?: string | null
+          sort_order?: number
+          stage?: string
           updated_at?: string
           workspace_id?: string
         }
@@ -179,6 +191,35 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_responsibles: {
+        Row: {
+          id: string
+          lead_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lead_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          lead_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_responsibles_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

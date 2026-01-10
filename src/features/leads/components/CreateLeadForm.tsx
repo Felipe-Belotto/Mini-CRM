@@ -15,8 +15,8 @@ import {
 } from "@/shared/components/ui/select";
 import { AvatarUpload } from "@/shared/components/ui/avatar-upload";
 import { useToast } from "@/shared/hooks/use-toast";
-import type { KanbanStage, Lead, User as UserType } from "@/shared/types/crm";
-import { ResponsibleSelect } from "./ResponsibleSelect";
+import { LEAD_ORIGINS, type KanbanStage, type Lead, type User as UserType } from "@/shared/types/crm";
+import { MultiResponsibleSelect } from "./MultiResponsibleSelect";
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
 import { createLeadAction } from "../actions/leads";
 import { uploadLeadAvatarAction } from "../actions/upload-avatar";
@@ -24,7 +24,7 @@ import { uploadLeadAvatarAction } from "../actions/upload-avatar";
 interface CreateLeadFormProps {
   initialStage?: KanbanStage;
   users: UserType[];
-  onSubmit: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  onSubmit: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "sortOrder">) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -41,8 +41,9 @@ export function CreateLeadForm({
   const [phone, setPhone] = useState("");
   const [position, setPosition] = useState("");
   const [company, setCompany] = useState("");
+  const [origin, setOrigin] = useState<string>("");
   const [notes, setNotes] = useState("");
-  const [responsibleId, setResponsibleId] = useState<string>("");
+  const [responsibleIds, setResponsibleIds] = useState<string[]>([]);
   const [stage, setStage] = useState<KanbanStage>(initialStage);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,9 +74,10 @@ export function CreateLeadForm({
         phone: phone.trim(),
         position: position.trim(),
         company: company.trim(),
+        origin: origin || undefined,
         notes: notes.trim(),
         stage,
-        responsibleId: responsibleId || undefined,
+        responsibleIds,
         workspaceId: currentWorkspace.id,
       });
 
@@ -98,16 +100,16 @@ export function CreateLeadForm({
         }
       }
 
-      // Chamar callback de sucesso (apenas para fechar o dialog)
       await onSubmit({
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
         position: position.trim(),
         company: company.trim(),
+        origin: origin || undefined,
         notes: notes.trim(),
         stage,
-        responsibleId: responsibleId || undefined,
+        responsibleIds,
         workspaceId: currentWorkspace.id,
       });
     } catch (error) {
@@ -213,6 +215,22 @@ export function CreateLeadForm({
       </div>
 
       <div className="grid gap-2">
+        <Label htmlFor="origin">Origem do Lead</Label>
+        <Select value={origin} onValueChange={setOrigin} disabled={isLoading}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a origem" />
+          </SelectTrigger>
+          <SelectContent>
+            {LEAD_ORIGINS.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-2">
         <Label htmlFor="stage">Etapa Inicial</Label>
         <Select value={stage} onValueChange={(value: KanbanStage) => setStage(value)}>
           <SelectTrigger>
@@ -230,9 +248,9 @@ export function CreateLeadForm({
         </Select>
       </div>
 
-      <ResponsibleSelect
-        value={responsibleId}
-        onChange={setResponsibleId}
+      <MultiResponsibleSelect
+        value={responsibleIds}
+        onChange={async (ids) => setResponsibleIds(ids)}
         users={users}
         disabled={isLoading}
       />

@@ -61,10 +61,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
     onSelect(lead);
   };
 
-  // Por enquanto suporta apenas 1 responsável, mas preparado para múltiplos
-  const responsibles = lead.responsibleId
-    ? users.filter((u) => u.id === lead.responsibleId)
-    : [];
+  const responsibles = users.filter((u) => lead.responsibleIds.includes(u.id));
 
   const notesCount = countJsonArray(lead.notes);
   const messagesCount = countJsonArray(lead.messages);

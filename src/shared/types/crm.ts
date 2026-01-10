@@ -39,6 +39,7 @@ export interface Lead {
   phone: string;
   position: string;
   company: string;
+  origin?: string;
   segment?: string;
   revenue?: string;
   linkedIn?: string;
@@ -47,11 +48,33 @@ export interface Lead {
   avatarUrl?: string;
   stage: KanbanStage;
   campaignId?: string;
-  responsibleId?: string;
+  responsibleIds: string[]; // Array de IDs de responsáveis
   workspaceId: string;
+  sortOrder: number; // Ordem do lead dentro da coluna do Kanban
   createdAt: Date;
   updatedAt: Date;
+  archivedAt?: Date; // Data de arquivamento (soft delete)
 }
+
+// Origens pré-definidas para leads
+export const LEAD_ORIGINS = [
+  { id: "facebook", label: "Facebook" },
+  { id: "instagram", label: "Instagram" },
+  { id: "google", label: "Google" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "whatsapp", label: "WhatsApp" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "YouTube" },
+  { id: "twitter", label: "Twitter/X" },
+  { id: "site", label: "Site" },
+  { id: "indicacao", label: "Indicação" },
+  { id: "evento", label: "Evento" },
+  { id: "telefone", label: "Telefone" },
+  { id: "email", label: "E-mail" },
+  { id: "outro", label: "Outro" },
+] as const;
+
+export type LeadOrigin = (typeof LEAD_ORIGINS)[number]["id"];
 
 // Campaign - derivado de CampaignRow
 export interface Campaign {

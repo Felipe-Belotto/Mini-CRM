@@ -15,11 +15,12 @@ interface UsePipelineUIReturn {
   handleCloseDrawer: () => void;
   handleCreateLead: (stage: KanbanStage) => void;
   handleLeadCreated: (
-    lead: Omit<Lead, "id" | "createdAt" | "updatedAt">,
+    lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "sortOrder">,
   ) => Promise<Lead>;
   handleMoveLead: (
     leadId: string,
     newStage: KanbanStage,
+    newSortOrder?: number,
   ) => Promise<ValidationError[] | null>;
 }
 
@@ -46,7 +47,7 @@ export function usePipelineUI(): UsePipelineUIReturn {
   };
 
   const handleLeadCreated = async (
-    lead: Omit<Lead, "id" | "createdAt" | "updatedAt">,
+    lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "sortOrder">,
   ): Promise<Lead> => {
     return await createLeadAction(lead);
   };
@@ -54,8 +55,9 @@ export function usePipelineUI(): UsePipelineUIReturn {
   const handleMoveLead = async (
     leadId: string,
     newStage: KanbanStage,
+    newSortOrder?: number,
   ): Promise<ValidationError[] | null> => {
-    return await moveLeadAction(leadId, newStage, pipelineConfig);
+    return await moveLeadAction(leadId, newStage, pipelineConfig, newSortOrder);
   };
 
   return {

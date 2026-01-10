@@ -1,11 +1,39 @@
 "use client";
 
-import { FileText, List, Mail, MessageSquare, Phone } from "lucide-react";
+import {
+  Archive,
+  FileText,
+  List,
+  Mail,
+  MessageSquare,
+  MoreVertical,
+  Phone,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { AvatarUpload } from "@/shared/components/ui/avatar-upload";
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTitle } from "@/shared/components/ui/sheet";
 import {
@@ -16,6 +44,11 @@ import {
 } from "@/shared/components/ui/tabs";
 import { useToast } from "@/shared/hooks/use-toast";
 import type { Lead, User as UserType } from "@/shared/types/crm";
+import {
+  archiveLeadAction,
+  deleteLeadAction,
+  restoreLeadAction,
+} from "../actions/leads";
 import { uploadLeadAvatarAction } from "../actions/upload-avatar";
 import { useLeadDrawer } from "../hooks/use-lead-drawer";
 import { getInitials } from "../lib/avatar-utils";
@@ -29,6 +62,9 @@ interface LeadDrawerProps {
   users: UserType[];
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Lead>) => Promise<void>;
+  onArchive?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onRestore?: (id: string) => void;
 }
 
 export const LeadDrawer: React.FC<LeadDrawerProps> = ({
@@ -37,6 +73,9 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   users,
   onClose,
   onUpdate,
+  onArchive,
+  onDelete,
+  onRestore,
 }) => {
   const { user: currentUser } = useAuth();
   const { currentWorkspace } = useWorkspace();
@@ -44,6 +83,80 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isActioning, setIsActioning] = useState(false);
+
+  const isArchived = lead?.archivedAt !== undefined;
+
+  const handleArchive = async () => {
+    if (!lead) return;
+    setIsActioning(true);
+    try {
+      await archiveLeadAction(lead.id);
+      toast({
+        title: "Lead arquivado",
+        description: "O lead foi movido para o arquivo.",
+      });
+      onArchive?.(lead.id);
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Erro ao arquivar",
+        description:
+          error instanceof Error ? error.message : "Não foi possível arquivar o lead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!lead) return;
+    setIsActioning(true);
+    try {
+      await restoreLeadAction(lead.id);
+      toast({
+        title: "Lead restaurado",
+        description: "O lead foi restaurado com sucesso.",
+      });
+      onRestore?.(lead.id);
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Erro ao restaurar",
+        description:
+          error instanceof Error ? error.message : "Não foi possível restaurar o lead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!lead) return;
+    setIsActioning(true);
+    try {
+      await deleteLeadAction(lead.id);
+      toast({
+        title: "Lead excluído",
+        description: "O lead foi excluído permanentemente.",
+      });
+      onDelete?.(lead.id);
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir",
+        description:
+          error instanceof Error ? error.message : "Não foi possível excluir o lead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActioning(false);
+      setShowDeleteDialog(false);
+    }
+  };
 
   const mockLead: Lead = {
     id: "",
@@ -54,6 +167,8 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
     company: "",
     stage: "base",
     workspaceId: "",
+    responsibleIds: [],
+    sortOrder: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -66,9 +181,6 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   });
 
   if (!lead) return null;
-
-  // Convert single responsibleId to array for MultiResponsibleSelect
-  const responsibleIds = lead.responsibleId ? [lead.responsibleId] : [];
 
   const handleCustomFieldChange = (fieldId: string, value: string) => {
     const field = customFields.find((f) => f.id === fieldId);
@@ -131,11 +243,7 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   };
 
   const handleResponsibleChange = async (responsibleIds: string[]) => {
-    // Por enquanto, pega o primeiro responsável do array
-    // TODO: Criar tabela de relacionamento para múltiplos responsáveis
-    const responsibleId =
-      responsibleIds.length > 0 ? responsibleIds[0] : undefined;
-    await onUpdate(lead.id, { responsibleId });
+    await onUpdate(lead.id, { responsibleIds });
   };
 
   return (
@@ -157,6 +265,12 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
               <SheetTitle className="text-xl font-semibold mb-1 truncate text-foreground">
                 {lead.name || "Sem nome"}
               </SheetTitle>
+              {isArchived && (
+                <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full mb-2">
+                  <Archive className="w-3 h-3" />
+                  Arquivado
+                </span>
+              )}
               {(lead.position || lead.company) && (
                 <p className="text-sm text-muted-foreground mb-2">
                   {lead.position}
@@ -188,8 +302,8 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <div className="flex-shrink-0 border-b">
-            <TabsList className="w-full justify-start rounded-none border-b-0 h-auto p-0 bg-transparent">
+          <div className="flex-shrink-0 border-b flex items-center justify-between pr-4">
+            <TabsList className="justify-start rounded-none border-b-0 h-auto p-0 bg-transparent">
               <TabsTrigger
                 value="details"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
@@ -212,6 +326,47 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
                 Mensagens
               </TabsTrigger>
             </TabsList>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  disabled={isActioning}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Ações do lead</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isArchived ? (
+                  <DropdownMenuItem
+                    onClick={handleRestore}
+                    disabled={isActioning}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Restaurar lead
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={handleArchive}
+                    disabled={isActioning}
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    Arquivar lead
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isActioning}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir permanentemente
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <ScrollArea className="flex-1">
@@ -225,7 +380,7 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
                   onUpdate={onUpdate}
                   onCustomFieldChange={handleCustomFieldChange}
                   onResponsibleChange={handleResponsibleChange}
-                  responsibleIds={responsibleIds}
+                  responsibleIds={lead.responsibleIds}
                 />
               </TabsContent>
 
@@ -245,6 +400,32 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
           </ScrollArea>
         </Tabs>
       </SheetContent>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lead permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O lead{" "}
+              <strong>{lead?.name}</strong> será excluído permanentemente do
+              sistema, incluindo todas as notas, mensagens e histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isActioning}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isActioning}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isActioning ? "Excluindo..." : "Excluir permanentemente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 };

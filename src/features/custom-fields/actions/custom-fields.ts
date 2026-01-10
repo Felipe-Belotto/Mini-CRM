@@ -305,3 +305,56 @@ export async function getCustomFieldsAction(
     return [];
   }
 }
+
+/**
+ * Server Action para reordenar campos personalizados
+ * Atualiza o campo 'order' de cada campo baseado na nova ordem
+ */
+export async function reorderCustomFieldsAction(
+  workspaceId: string,
+  orderedIds: string[],
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Verificar autenticação e acesso ao workspace
+    await requireAuth();
+    const hasAccess = await hasWorkspaceAccess(workspaceId);
+
+    if (!hasAccess) {
+      return {
+        success: false,
+        error: "Você não tem acesso a este workspace",
+      };
+    }
+
+    const supabase = await createClient();
+
+    // Atualizar a ordem de cada campo
+    const updatePromises = orderedIds.map((id, index) =>
+      supabase
+        .from("custom_fields")
+        .update({ order: index })
+        .eq("id", id)
+        .eq("workspace_id", workspaceId)
+    );
+
+    const results = await Promise.all(updatePromises);
+
+    // Verificar se alguma atualização falhou
+    const failedUpdate = results.find((result) => result.error);
+    if (failedUpdate?.error) {
+      console.error("Error reordering custom fields:", failedUpdate.error);
+      return {
+        success: false,
+        error: failedUpdate.error.message || "Não foi possível reordenar os campos",
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in reorderCustomFieldsAction:", error);
+    return {
+      success: false,
+      error: "Ocorreu um erro ao reordenar os campos",
+    };
+  }
+}

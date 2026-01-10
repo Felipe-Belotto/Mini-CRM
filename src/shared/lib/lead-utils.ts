@@ -1,4 +1,5 @@
 import type {
+  CustomField,
   KanbanStage,
   Lead,
   ValidationError,
@@ -6,13 +7,30 @@ import type {
 } from "@/shared/types/crm";
 
 /**
+ * Interface para valores de campos personalizados
+ */
+export interface CustomFieldValues {
+  [fieldId: string]: string | undefined;
+}
+
+/**
+ * Opções adicionais para validação
+ */
+export interface ValidateLeadOptions {
+  customFields?: CustomField[];
+  customFieldValues?: CustomFieldValues;
+}
+
+/**
  * Valida se o lead possui os campos obrigatórios para uma etapa
  * Usa configuração dinâmica se fornecida, caso contrário usa validação padrão
+ * Suporta validação de campos personalizados quando customFields e customFieldValues são fornecidos
  */
 export function validateLeadForStage(
   lead: Lead,
   targetStage: KanbanStage,
   pipelineConfig?: PipelineConfig | null,
+  options?: ValidateLeadOptions,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -26,26 +44,41 @@ export function validateLeadForStage(
     return errors;
   }
 
-  // Mapear IDs de campos para valores do lead
-  // Nota: Os IDs dos campos (chaves) continuam em português pois são identificadores usados no PipelineConfig
-  // Mas os valores vêm das propriedades em inglês do tipo Lead
-  const fieldValueMap: Record<string, string | undefined> = {
+  const standardFieldValueMap: Record<string, string | undefined> = {
     nome: lead.name,
     email: lead.email,
     telefone: lead.phone,
     cargo: lead.position,
     empresa: lead.company,
+    origem: lead.origin,
   };
+
+  const { customFields = [], customFieldValues = {} } = options || {};
 
   // Validar campos obrigatórios
   stageConfig.requiredFields.forEach((fieldId) => {
-    const value = fieldValueMap[fieldId];
-    if (!value || value.trim() === "") {
-      const fieldName = getFieldName(fieldId);
-      errors.push({
-        field: fieldId,
-        message: `${fieldName} é obrigatório para esta etapa`,
-      });
+    // Primeiro verificar se é um campo padrão
+    if (fieldId in standardFieldValueMap) {
+      const value = standardFieldValueMap[fieldId];
+      if (!value || value.trim() === "") {
+        const fieldName = getFieldName(fieldId);
+        errors.push({
+          field: fieldId,
+          message: `${fieldName} é obrigatório para esta etapa`,
+        });
+      }
+    } else {
+      // É um campo personalizado - verificar pelo ID (UUID)
+      const customField = customFields.find((f) => f.id === fieldId);
+      if (customField) {
+        const value = customFieldValues[fieldId];
+        if (!value || value.trim() === "") {
+          errors.push({
+            field: fieldId,
+            message: `${customField.name} é obrigatório para esta etapa`,
+          });
+        }
+      }
     }
   });
 
@@ -59,6 +92,7 @@ function getFieldName(fieldId: string): string {
     telefone: "Telefone",
     cargo: "Cargo",
     empresa: "Empresa",
+    origem: "Origem",
   };
   return fieldNames[fieldId] || fieldId;
 }

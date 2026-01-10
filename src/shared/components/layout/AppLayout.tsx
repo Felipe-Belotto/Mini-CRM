@@ -70,9 +70,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             </div>
           </ScrollArea>
         ) : (
-          <ScrollArea className="flex-1 min-h-0">
-            <div>{children}</div>
-          </ScrollArea>
+          <main className="flex-1 min-h-0 overflow-auto">
+            {children}
+          </main>
         )}
       </div>
     </div>
