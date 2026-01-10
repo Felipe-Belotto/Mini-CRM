@@ -1,21 +1,22 @@
 import { cn } from "@/shared/lib/utils";
-import type { Campaign } from "@/shared/types/crm";
+import type { Campaign, KanbanStage } from "@/shared/types/crm";
 
 export interface CampaignFormData {
-  nome: string;
-  contexto: string;
-  tomDeVoz: "formal" | "informal" | "neutro";
-  instrucoesIA: string;
-  status: "ativa" | "pausada" | "finalizada";
+  name: string;
+  context: string;
+  voiceTone: "formal" | "informal" | "neutro";
+  aiInstructions: string;
+  status: "active" | "paused" | "finished";
+  triggerStage?: KanbanStage;
 }
 
 /**
  * Mapeamento de cores para status de campanha
  */
 export const CAMPAIGN_STATUS_COLORS = {
-  ativa: "bg-success/10 text-success border-success/20",
-  pausada: "bg-warning/10 text-warning border-warning/20",
-  finalizada: "bg-muted text-muted-foreground border-muted",
+  active: "bg-success/10 text-success border-success/20",
+  paused: "bg-warning/10 text-warning border-warning/20",
+  finished: "bg-muted text-muted-foreground border-muted",
 } as const;
 
 /**
@@ -36,11 +37,11 @@ export function validateCampaignForm(formData: CampaignFormData): {
 } {
   const errors: string[] = [];
 
-  if (!formData.nome || formData.nome.trim() === "") {
+  if (!formData.name || formData.name.trim() === "") {
     errors.push("Nome é obrigatório");
   }
 
-  if (!formData.contexto || formData.contexto.trim() === "") {
+  if (!formData.context || formData.context.trim() === "") {
     errors.push("Contexto é obrigatório");
   }
 

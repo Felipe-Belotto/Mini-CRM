@@ -13,7 +13,7 @@ export function calculateQualifiedLeads(leads: Lead[]): number {
  * Obtém o número de campanhas ativas
  */
 export function getActiveCampaignsCount(campaigns: Campaign[]): number {
-  return campaigns.filter((campaign) => campaign.status === "ativa").length;
+  return campaigns.filter((campaign) => campaign.status === "active").length;
 }
 
 /**

@@ -2,13 +2,12 @@
 
 import type React from "react";
 import type { Campaign } from "@/shared/types/crm";
+import type { CampaignFormData } from "../lib/campaign-utils";
 import { CampaignManager } from "./CampaignManager";
 
 interface CampaignsUIProps {
   campaigns: Campaign[];
-  onAddCampaign: (
-    campaign: Omit<Campaign, "id" | "createdAt" | "leadsCount">,
-  ) => Promise<void>;
+  onAddCampaign: (campaign: CampaignFormData) => Promise<void>;
 }
 
 export const CampaignsUI: React.FC<CampaignsUIProps> = ({

@@ -3,14 +3,7 @@
 import { Plus } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,25 +13,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/components/ui/dialog";
-import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import { Textarea } from "@/shared/components/ui/textarea";
 import type { Campaign } from "@/shared/types/crm";
+import type { CampaignFormData } from "../lib/campaign-utils";
 import { useCampaignForm } from "../hooks/use-campaign-form";
-import { getCampaignStatusColorClass } from "../lib/campaign-utils";
+import { CampaignForm } from "./CampaignForm";
+import { CampaignCard } from "./CampaignCard";
 
 interface CampaignManagerProps {
   campaigns: Campaign[];
-  onAddCampaign: (
-    campaign: Omit<Campaign, "id" | "createdAt" | "leadsCount">,
-  ) => Promise<void>;
+  onAddCampaign: (campaign: CampaignFormData) => Promise<void>;
 }
 
 export const CampaignManager: React.FC<CampaignManagerProps> = ({
@@ -92,79 +75,7 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="nome">Nome da Campanha *</Label>
-                  <Input
-                    id="nome"
-                    value={formData.nome}
-                    onChange={(e) => updateField("nome", e.target.value)}
-                    placeholder="Ex: Prospecção Q1 2024"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="contexto">Contexto *</Label>
-                  <Textarea
-                    id="contexto"
-                    value={formData.contexto}
-                    onChange={(e) => updateField("contexto", e.target.value)}
-                    placeholder="Descreva o objetivo e público-alvo da campanha..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="tomDeVoz">Tom de Voz</Label>
-                  <Select
-                    value={formData.tomDeVoz}
-                    onValueChange={(value: "formal" | "informal" | "neutro") =>
-                      updateField("tomDeVoz", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tom" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="formal">Formal</SelectItem>
-                      <SelectItem value="informal">Informal</SelectItem>
-                      <SelectItem value="neutro">Neutro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="instrucoesIA">Instruções para IA</Label>
-                  <Textarea
-                    id="instrucoesIA"
-                    value={formData.instrucoesIA}
-                    onChange={(e) =>
-                      updateField("instrucoesIA", e.target.value)
-                    }
-                    placeholder="Instruções específicas para geração de mensagens..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(
-                      value: "ativa" | "pausada" | "finalizada",
-                    ) => updateField("status", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativa">Ativa</SelectItem>
-                      <SelectItem value="pausada">Pausada</SelectItem>
-                      <SelectItem value="finalizada">Finalizada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <CampaignForm formData={formData} onFieldChange={updateField} />
 
               <DialogFooter>
                 <Button
@@ -188,43 +99,7 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {campaigns.map((campaign) => (
-          <Card
-            key={campaign.id}
-            className="metric-card hover:border-accent/30"
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-base font-semibold">
-                  {campaign.nome}
-                </CardTitle>
-                <Badge
-                  variant="outline"
-                  className={getCampaignStatusColorClass(campaign.status)}
-                >
-                  {campaign.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                {campaign.contexto}
-              </p>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Tom:{" "}
-                  <span className="font-medium text-foreground capitalize">
-                    {campaign.tomDeVoz}
-                  </span>
-                </span>
-                <span className="text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    {campaign.leadsCount}
-                  </span>{" "}
-                  leads
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          <CampaignCard key={campaign.id} campaign={campaign} />
         ))}
       </div>
     </div>

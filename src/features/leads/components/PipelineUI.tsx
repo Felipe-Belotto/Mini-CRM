@@ -1,36 +1,55 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
-import type { KanbanStage, Lead, ValidationError } from "@/shared/types/crm";
+import type {
+  KanbanStage,
+  Lead,
+  ValidationError,
+  Campaign,
+} from "@/shared/types/crm";
 import { KanbanBoard } from "./KanbanBoard";
 import { LeadDrawer } from "./LeadDrawer";
+import { CreateLeadDialog } from "./CreateLeadDialog";
+import { usePipelineUI } from "../hooks/use-pipeline-ui";
 
 interface PipelineUIProps {
   leads: Lead[];
+  campaigns?: Campaign[];
   onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   onMoveLead: (
     leadId: string,
     newStage: KanbanStage,
   ) => Promise<ValidationError[] | null>;
+  onLeadCreated?: (lead: Lead) => void;
 }
 
 export const PipelineUI: React.FC<PipelineUIProps> = ({
   leads,
+  campaigns = [],
   onUpdateLead,
   onMoveLead,
+  onLeadCreated,
 }) => {
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const {
+    selectedLead,
+    isDrawerOpen,
+    isCreateDialogOpen,
+    createLeadStage,
+    setIsCreateDialogOpen,
+    handleLeadSelect,
+    handleCloseDrawer,
+    handleCreateLead,
+    handleLeadCreated: handleLeadCreatedInternal,
+    handleMoveLead,
+  } = usePipelineUI();
 
-  const handleLeadSelect = (lead: Lead) => {
-    setSelectedLead(lead);
-    setIsDrawerOpen(true);
-  };
-
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-    setSelectedLead(null);
+  const handleLeadCreated = async (
+    lead: Omit<Lead, "id" | "createdAt" | "updatedAt">,
+  ) => {
+    const newLead = await handleLeadCreatedInternal(lead);
+    if (onLeadCreated) {
+      onLeadCreated(newLead);
+    }
   };
 
   return (
@@ -38,8 +57,9 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
       <div className="p-6">
         <KanbanBoard
           leads={leads}
-          onMoveLead={onMoveLead}
+          onMoveLead={handleMoveLead}
           onLeadSelect={handleLeadSelect}
+          onCreateLead={handleCreateLead}
         />
       </div>
       <LeadDrawer
@@ -47,7 +67,14 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
         isOpen={isDrawerOpen}
         onClose={handleCloseDrawer}
         onUpdate={onUpdateLead}
-        onMoveLead={onMoveLead}
+        onMoveLead={handleMoveLead}
+        campaigns={campaigns}
+      />
+      <CreateLeadDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        initialStage={createLeadStage}
+        onCreateLead={handleLeadCreated}
       />
     </>
   );

@@ -50,7 +50,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onSelect }) => {
         <div className="flex-1 min-w-0" onClick={handleClick}>
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-medium text-sm truncate">
-              {lead.nome || "Sem nome"}
+              {lead.name || "Sem nome"}
             </h4>
             {!hasRequiredFields && (
               <span
@@ -64,21 +64,21 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onSelect }) => {
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Building2 className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">
-                {lead.empresa || "Empresa não informada"}
+                {lead.company || "Empresa não informada"}
               </span>
             </div>
 
-            {lead.cargo && (
+            {lead.position && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Briefcase className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{lead.cargo}</span>
+                <span className="truncate">{lead.position}</span>
               </div>
             )}
 
-            {lead.telefone && (
+            {lead.phone && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Phone className="w-3 h-3 flex-shrink-0" />
-                <span>{lead.telefone}</span>
+                <span>{lead.phone}</span>
               </div>
             )}
           </div>

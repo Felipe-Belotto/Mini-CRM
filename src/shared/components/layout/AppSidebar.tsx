@@ -1,18 +1,16 @@
 "use client";
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  LayoutDashboard,
-  Megaphone,
-  Users,
-  Zap,
-} from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, Users } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Button } from "@/shared/components/ui/button";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { cn } from "@/shared/lib/utils";
+import type { User, Workspace } from "@/shared/types/crm";
+import { SidebarFooter } from "./SidebarFooter";
+import { SidebarHeader } from "./SidebarHeader";
+import { SidebarNav } from "./SidebarNav";
+import { SidebarNavFooter } from "./SidebarNavFooter";
+import { SettingsSidebar } from "./SettingsSidebar";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -20,81 +18,58 @@ const navItems = [
   { icon: Megaphone, label: "Campanhas", path: "/campanhas" },
 ];
 
-export const AppSidebar: React.FC = () => {
+interface AppSidebarProps {
+  user: User;
+  currentWorkspace: Workspace;
+  workspaces: Workspace[];
+  onLogout: () => void;
+}
+
+export const AppSidebar: React.FC<AppSidebarProps> = ({
+  user,
+  currentWorkspace,
+  workspaces,
+  onLogout,
+}) => {
   const pathname = usePathname();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const isSettingsPage = pathname?.startsWith("/configuracoes");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleBackFromSettings = () => {
+    router.push("/");
+  };
 
   return (
-    <aside
-      className={cn(
-        "h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out relative overflow-visible",
-        sidebarCollapsed ? "w-16" : "w-64",
+    <aside className="h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col relative overflow-visible">
+      {!isSettingsPage && (
+        <SidebarHeader
+          currentWorkspace={currentWorkspace}
+          workspaces={workspaces}
+        />
       )}
-    >
-      <div
-        className={cn(
-          "h-16 flex items-center border-b border-sidebar-border relative",
-          sidebarCollapsed ? "justify-center px-2" : "justify-between px-4",
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <Zap className="w-5 h-5 text-accent-foreground" />
-          </div>
-          {!sidebarCollapsed && (
-            <span className="font-semibold text-lg text-sidebar-foreground">
-              MiniCRM
-            </span>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent z-20",
-            sidebarCollapsed &&
-              "absolute -right-3 top-6 bg-sidebar border border-sidebar-border shadow-sm hover:bg-sidebar-accent",
-          )}
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        >
-          {sidebarCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
 
-      <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={cn(
-                "sidebar-link",
-                isActive && "sidebar-link-active",
-                sidebarCollapsed && "justify-center px-2",
-              )}
-              title={sidebarCollapsed ? item.label : undefined}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {!sidebarCollapsed && (
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="text-xs text-muted-foreground">
-            Mini CRM para SDRs
-            <br />
-            <span className="text-accent">v1.0.0</span>
+      {isSettingsPage ? (
+        <div className="flex-1 flex flex-col">
+          <div className="h-16 flex items-center border-b border-sidebar-border px-4 w-full">
+            <h2 className="text-lg font-semibold text-sidebar-foreground">
+              Configurações
+            </h2>
           </div>
+          <SettingsSidebar onBack={handleBackFromSettings} />
         </div>
+      ) : (
+        <>
+          <SidebarNav mounted={mounted} pathname={pathname} items={navItems} />
+          <SidebarNavFooter mounted={mounted} pathname={pathname} />
+        </>
       )}
+
+      <SidebarFooter user={user} onLogout={onLogout} />
     </aside>
   );
 };

@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import React from "react";
 import { useToast } from "@/shared/hooks/use-toast";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import {
   KANBAN_COLUMNS,
   type KanbanStage,
@@ -29,12 +30,14 @@ interface KanbanBoardProps {
     newStage: KanbanStage,
   ) => Promise<ValidationError[] | null>;
   onLeadSelect: (lead: Lead) => void;
+  onCreateLead?: (stage: KanbanStage) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   leads,
   onMoveLead,
   onLeadSelect,
+  onCreateLead,
 }) => {
   const { toast } = useToast();
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -91,16 +94,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
-        {KANBAN_COLUMNS.map((column) => (
-          <KanbanColumnComponent
-            key={column.id}
-            column={column}
-            leads={getLeadsByStage(leads, column.id)}
-            onLeadSelect={onLeadSelect}
-          />
-        ))}
-      </div>
+      <ScrollArea className="w-full">
+        <div className="flex gap-4 pb-4 min-w-max">
+          {KANBAN_COLUMNS.map((column) => (
+            <KanbanColumnComponent
+              key={column.id}
+              column={column}
+              leads={getLeadsByStage(leads, column.id)}
+              onLeadSelect={onLeadSelect}
+              onCreateLead={onCreateLead}
+            />
+          ))}
+        </div>
+      </ScrollArea>
 
       <DragOverlay>
         {activeLead && <LeadCard lead={activeLead} onSelect={() => {}} />}

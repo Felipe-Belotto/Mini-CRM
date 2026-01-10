@@ -35,7 +35,7 @@ export const AI_SUGGESTIONS: AISuggestion[] = [
  */
 export function formatMessage(template: string, lead: Lead): string {
   return template
-    .replace("{nome}", lead.nome || "Lead")
-    .replace("{cargo}", lead.cargo || "profissional")
-    .replace("{empresa}", lead.empresa || "sua empresa");
+    .replace("{nome}", lead.name || "Lead")
+    .replace("{cargo}", lead.position || "profissional")
+    .replace("{empresa}", lead.company || "sua empresa");
 }

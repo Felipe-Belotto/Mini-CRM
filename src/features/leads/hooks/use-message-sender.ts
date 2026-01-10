@@ -42,7 +42,7 @@ export function useMessageSender({ lead, onMoveLead }: UseMessageSenderProps) {
 
       toast({
         title: "Mensagem enviada!",
-        description: `${messageType} enviado para ${lead.nome}. Lead movido para "Tentando Contato".`,
+        description: `${messageType} enviado para ${lead.name}. Lead movido para "Tentando Contato".`,
       });
     } finally {
       setSendingMessage(false);

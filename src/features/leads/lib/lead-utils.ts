@@ -11,7 +11,7 @@ export function getLeadsByStage(leads: Lead[], stage: KanbanStage): Lead[] {
  * Verifica se o lead tem os campos obrigatórios preenchidos
  */
 export function hasRequiredFields(lead: Lead): boolean {
-  return !!(lead.nome && lead.telefone && lead.cargo);
+  return !!(lead.name && lead.phone && lead.position);
 }
 
 /**
@@ -23,14 +23,14 @@ export function getLeadValidationStatus(lead: Lead): {
 } {
   const missingFields: string[] = [];
 
-  if (!lead.nome || lead.nome.trim() === "") {
-    missingFields.push("nome");
+  if (!lead.name || lead.name.trim() === "") {
+    missingFields.push("name");
   }
-  if (!lead.telefone || lead.telefone.trim() === "") {
-    missingFields.push("telefone");
+  if (!lead.phone || lead.phone.trim() === "") {
+    missingFields.push("phone");
   }
-  if (!lead.cargo || lead.cargo.trim() === "") {
-    missingFields.push("cargo");
+  if (!lead.position || lead.position.trim() === "") {
+    missingFields.push("position");
   }
 
   return {

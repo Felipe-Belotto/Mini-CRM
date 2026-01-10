@@ -21,7 +21,7 @@ interface CampaignsOverviewProps {
 export const CampaignsOverview: React.FC<CampaignsOverviewProps> = ({
   campaigns,
 }) => {
-  const activeCampaigns = getCampaignsByStatus(campaigns, "ativa");
+  const activeCampaigns = getCampaignsByStatus(campaigns, "active");
 
   return (
     <Card className="metric-card">
@@ -43,7 +43,7 @@ export const CampaignsOverview: React.FC<CampaignsOverviewProps> = ({
                 className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
               >
                 <div className="space-y-1">
-                  <p className="font-medium text-sm">{campaign.nome}</p>
+                  <p className="font-medium text-sm">{campaign.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {campaign.leadsCount} leads
                   </p>

@@ -2,24 +2,22 @@
 
 import { useState } from "react";
 import { useToast } from "@/shared/hooks/use-toast";
-import type { Campaign } from "@/shared/types/crm";
 import {
   type CampaignFormData,
   validateCampaignForm,
 } from "../lib/campaign-utils";
 
 interface UseCampaignFormProps {
-  onAddCampaign: (
-    campaign: Omit<Campaign, "id" | "createdAt" | "leadsCount">,
-  ) => Promise<void>;
+  onAddCampaign: (campaign: CampaignFormData) => Promise<void>;
 }
 
 const initialFormData: CampaignFormData = {
-  nome: "",
-  contexto: "",
-  tomDeVoz: "neutro",
-  instrucoesIA: "",
-  status: "ativa",
+  name: "",
+  context: "",
+  voiceTone: "neutro",
+  aiInstructions: "",
+  status: "active",
+  triggerStage: undefined,
 };
 
 export function useCampaignForm({ onAddCampaign }: UseCampaignFormProps) {
@@ -54,7 +52,7 @@ export function useCampaignForm({ onAddCampaign }: UseCampaignFormProps) {
 
     toast({
       title: "Campanha criada!",
-      description: `A campanha "${formData.nome}" foi criada com sucesso.`,
+      description: `A campanha "${formData.name}" foi criada com sucesso.`,
     });
 
     return true;
