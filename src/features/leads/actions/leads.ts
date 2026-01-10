@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { requireAuth, hasWorkspaceAccess } from "@/shared/lib/supabase/utils";
 import { validateLeadForStage } from "@/shared/lib/lead-utils";
@@ -17,18 +18,20 @@ import type {
 function mapDbLeadToLead(dbLead: LeadRow): Lead {
   return {
     id: dbLead.id,
-    name: dbLead.nome,
+    name: dbLead.name,
     email: dbLead.email,
-    phone: dbLead.telefone,
-    position: dbLead.cargo,
-    company: dbLead.empresa,
-    segment: dbLead.segmento || undefined,
-    revenue: dbLead.faturamento || undefined,
+    phone: dbLead.phone,
+    position: dbLead.position,
+    company: dbLead.company,
+    segment: dbLead.segment || undefined,
+    revenue: dbLead.revenue || undefined,
     linkedIn: dbLead.linkedin || undefined,
-    notes: dbLead.notas || undefined,
+    notes: dbLead.notes || undefined,
+    messages: (dbLead as Record<string, unknown>).messages as string || undefined,
+    avatarUrl: dbLead.avatar_url || undefined,
     stage: dbLead.stage as KanbanStage,
-    campaignId: dbLead.campanha_id || undefined,
-    responsibleId: dbLead.responsavel_id || undefined,
+    campaignId: dbLead.campaign_id || undefined,
+    responsibleId: dbLead.responsible_id || undefined,
     workspaceId: dbLead.workspace_id,
     createdAt: new Date(dbLead.created_at),
     updatedAt: new Date(dbLead.updated_at),
@@ -57,18 +60,19 @@ export async function createLeadAction(
       .from("leads")
       .insert({
         workspace_id: lead.workspaceId,
-        nome: lead.name,
+        name: lead.name,
         email: lead.email,
-        telefone: lead.phone,
-        cargo: lead.position,
-        empresa: lead.company,
-        segmento: lead.segment ?? null,
-        faturamento: lead.revenue ?? null,
+        phone: lead.phone,
+        position: lead.position,
+        company: lead.company,
+        segment: lead.segment ?? null,
+        revenue: lead.revenue ?? null,
         linkedin: lead.linkedIn ?? null,
-        notas: lead.notes ?? null,
+        notes: lead.notes ?? null,
+        avatar_url: lead.avatarUrl ?? null,
         stage: lead.stage,
-        campanha_id: lead.campaignId ?? null,
-        responsavel_id: lead.responsibleId ?? null,
+        campaign_id: lead.campaignId ?? null,
+        responsible_id: lead.responsibleId ?? null,
         custom_fields: null,
       })
       .select()
@@ -78,6 +82,8 @@ export async function createLeadAction(
       console.error("Error creating lead:", error);
       throw new Error(error?.message || "Não foi possível criar o lead");
     }
+
+    revalidatePath("/pipeline");
 
     return mapDbLeadToLead(dbLead);
   } catch (error) {
@@ -117,23 +123,25 @@ export async function updateLeadAction(
     // Preparar updates para o banco
     const dbUpdates: Record<string, unknown> = {};
 
-    if (updates.name !== undefined) dbUpdates.nome = updates.name;
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.email !== undefined) dbUpdates.email = updates.email;
-    if (updates.phone !== undefined) dbUpdates.telefone = updates.phone;
-    if (updates.position !== undefined) dbUpdates.cargo = updates.position;
-    if (updates.company !== undefined) dbUpdates.empresa = updates.company;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.position !== undefined) dbUpdates.position = updates.position;
+    if (updates.company !== undefined) dbUpdates.company = updates.company;
     if (updates.segment !== undefined)
-      dbUpdates.segmento = updates.segment ?? null;
+      dbUpdates.segment = updates.segment ?? null;
     if (updates.revenue !== undefined)
-      dbUpdates.faturamento = updates.revenue ?? null;
+      dbUpdates.revenue = updates.revenue ?? null;
     if (updates.linkedIn !== undefined)
       dbUpdates.linkedin = updates.linkedIn ?? null;
-    if (updates.notes !== undefined) dbUpdates.notas = updates.notes ?? null;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes ?? null;
+    if (updates.avatarUrl !== undefined)
+      dbUpdates.avatar_url = updates.avatarUrl ?? null;
     if (updates.stage !== undefined) dbUpdates.stage = updates.stage;
     if (updates.campaignId !== undefined)
-      dbUpdates.campanha_id = updates.campaignId ?? null;
+      dbUpdates.campaign_id = updates.campaignId ?? null;
     if (updates.responsibleId !== undefined)
-      dbUpdates.responsavel_id = updates.responsibleId ?? null;
+      dbUpdates.responsible_id = updates.responsibleId ?? null;
 
     // Atualizar lead no banco
     const { error } = await supabase
@@ -145,6 +153,8 @@ export async function updateLeadAction(
       console.error("Error updating lead:", error);
       throw new Error(error.message || "Não foi possível atualizar o lead");
     }
+
+    revalidatePath("/pipeline");
   } catch (error) {
     console.error("Error in updateLeadAction:", error);
     throw error;
@@ -192,6 +202,8 @@ export async function moveLeadAction(
 
     // Atualizar stage do lead
     await updateLeadAction(leadId, { stage: newStage });
+
+    revalidatePath("/pipeline");
 
     return null;
   } catch (error) {
@@ -308,6 +320,8 @@ export async function deleteLeadAction(leadId: string): Promise<void> {
       console.error("Error deleting lead:", error);
       throw new Error(error.message || "Não foi possível deletar o lead");
     }
+
+    revalidatePath("/pipeline");
   } catch (error) {
     console.error("Error in deleteLeadAction:", error);
     throw error;

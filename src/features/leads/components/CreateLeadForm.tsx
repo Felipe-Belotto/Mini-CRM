@@ -13,23 +13,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import type { KanbanStage, Lead } from "@/shared/types/crm";
+import { AvatarUpload } from "@/shared/components/ui/avatar-upload";
+import { useToast } from "@/shared/hooks/use-toast";
+import type { KanbanStage, Lead, User as UserType } from "@/shared/types/crm";
 import { ResponsibleSelect } from "./ResponsibleSelect";
-import { mockUsers } from "@/shared/data/mockData";
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { createLeadAction } from "../actions/leads";
+import { uploadLeadAvatarAction } from "../actions/upload-avatar";
 
 interface CreateLeadFormProps {
   initialStage?: KanbanStage;
+  users: UserType[];
   onSubmit: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   onCancel: () => void;
 }
 
 export function CreateLeadForm({
   initialStage = "base",
+  users,
   onSubmit,
   onCancel,
 }: CreateLeadFormProps) {
   const { currentWorkspace } = useWorkspace();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -38,6 +44,7 @@ export function CreateLeadForm({
   const [notes, setNotes] = useState("");
   const [responsibleId, setResponsibleId] = useState<string>("");
   const [stage, setStage] = useState<KanbanStage>(initialStage);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -59,6 +66,39 @@ export function CreateLeadForm({
 
     setIsLoading(true);
     try {
+      // Criar lead primeiro para obter o ID
+      const newLead = await createLeadAction({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        position: position.trim(),
+        company: company.trim(),
+        notes: notes.trim(),
+        stage,
+        responsibleId: responsibleId || undefined,
+        workspaceId: currentWorkspace.id,
+      });
+
+      // Se tiver arquivo de avatar, fazer upload
+      if (avatarFile && newLead.id) {
+        const uploadResult = await uploadLeadAvatarAction(
+          newLead.id,
+          currentWorkspace.id,
+          avatarFile,
+        );
+
+        if (!uploadResult.success) {
+          toast({
+            title: "Aviso",
+            description:
+              uploadResult.error ||
+              "Lead criado, mas não foi possível fazer upload do avatar",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Chamar callback de sucesso (apenas para fechar o dialog)
       await onSubmit({
         name: name.trim(),
         email: email.trim(),
@@ -70,6 +110,15 @@ export function CreateLeadForm({
         responsibleId: responsibleId || undefined,
         workspaceId: currentWorkspace.id,
       });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível criar o lead",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -77,6 +126,17 @@ export function CreateLeadForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Avatar Upload */}
+      <div className="flex justify-center mb-4">
+        <AvatarUpload
+          value={avatarFile}
+          onChange={(file) => setAvatarFile(file)}
+          disabled={isLoading}
+          size="lg"
+          fallbackText="Foto"
+        />
+      </div>
+
       <div className="grid gap-2">
         <Label htmlFor="name" className="flex items-center gap-2">
           <User className="w-4 h-4 text-muted-foreground" />
@@ -173,7 +233,7 @@ export function CreateLeadForm({
       <ResponsibleSelect
         value={responsibleId}
         onChange={setResponsibleId}
-        users={mockUsers}
+        users={users}
         disabled={isLoading}
       />
 

@@ -1,5 +1,3 @@
-"use server";
-
 import { createClient } from "@/shared/lib/supabase/server";
 import type { Tables } from "@/shared/types/supabase";
 

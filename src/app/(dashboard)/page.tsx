@@ -1,9 +1,13 @@
+import { redirect } from "next/navigation";
+import { getDashboardMetricsAction } from "@/features/dashboard/actions/dashboard";
 import { DashboardUI } from "@/features/dashboard/components/DashboardUI";
-import { mockCampaigns, mockLeads } from "@/shared/data/mockData";
 
 export default async function DashboardPage() {
-  const leads = mockLeads;
-  const campaigns = mockCampaigns;
+  const metrics = await getDashboardMetricsAction();
 
-  return <DashboardUI leads={leads} campaigns={campaigns} />;
+  if (!metrics) {
+    redirect("/onboarding/workspace");
+  }
+
+  return <DashboardUI leads={metrics.leads} campaigns={metrics.campaigns} />;
 }

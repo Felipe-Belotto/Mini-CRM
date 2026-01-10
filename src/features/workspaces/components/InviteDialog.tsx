@@ -242,7 +242,7 @@ export function InviteDialog({
                     <SelectItem value="admin">Administrador</SelectItem>
                     {isOwner && (
                       <SelectItem value="owner" disabled>
-                        Owner (use transferir ownership)
+                        Proprietário (use transferir propriedade)
                       </SelectItem>
                     )}
                   </SelectContent>

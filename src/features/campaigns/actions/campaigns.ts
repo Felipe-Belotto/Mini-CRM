@@ -13,13 +13,13 @@ function mapDbCampaignToCampaign(
 ): Campaign {
   return {
     id: dbCampaign.id,
-    name: dbCampaign.nome,
-    context: dbCampaign.contexto,
-    voiceTone: dbCampaign.tom_de_voz as "formal" | "informal" | "neutro",
-    aiInstructions: dbCampaign.instrucoes_ia,
+    name: dbCampaign.name,
+    context: dbCampaign.context,
+    voiceTone: dbCampaign.voice_tone as "formal" | "informal" | "neutro",
+    aiInstructions: dbCampaign.ai_instructions,
     status: dbCampaign.status as "active" | "paused" | "finished",
-    triggerStage: dbCampaign.etapa_gatilho
-      ? (dbCampaign.etapa_gatilho as KanbanStage)
+    triggerStage: dbCampaign.trigger_stage
+      ? (dbCampaign.trigger_stage as KanbanStage)
       : undefined,
     workspaceId: dbCampaign.workspace_id,
     leadsCount,
@@ -42,7 +42,6 @@ export async function addCampaignActionVoid(
 export async function addCampaignFromFormAction(
   formData: Omit<Campaign, "id" | "createdAt" | "leadsCount" | "workspaceId">,
 ): Promise<void> {
-  "use server";
   const { getCurrentWorkspaceAction } = await import("@/features/workspaces/actions/workspaces");
   const currentWorkspace = await getCurrentWorkspaceAction();
   
@@ -80,12 +79,12 @@ export async function addCampaignAction(
       .from("campaigns")
       .insert({
         workspace_id: campaign.workspaceId,
-        nome: campaign.name,
-        contexto: campaign.context,
-        tom_de_voz: campaign.voiceTone,
-        instrucoes_ia: campaign.aiInstructions,
+        name: campaign.name,
+        context: campaign.context,
+        voice_tone: campaign.voiceTone,
+        ai_instructions: campaign.aiInstructions,
         status: campaign.status,
-        etapa_gatilho: campaign.triggerStage ?? null,
+        trigger_stage: campaign.triggerStage ?? null,
       })
       .select()
       .single();
@@ -230,14 +229,14 @@ export async function updateCampaignAction(
     // Preparar updates para o banco
     const dbUpdates: Record<string, unknown> = {};
 
-    if (updates.name !== undefined) dbUpdates.nome = updates.name;
-    if (updates.context !== undefined) dbUpdates.contexto = updates.context;
-    if (updates.voiceTone !== undefined) dbUpdates.tom_de_voz = updates.voiceTone;
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.context !== undefined) dbUpdates.context = updates.context;
+    if (updates.voiceTone !== undefined) dbUpdates.voice_tone = updates.voiceTone;
     if (updates.aiInstructions !== undefined)
-      dbUpdates.instrucoes_ia = updates.aiInstructions;
+      dbUpdates.ai_instructions = updates.aiInstructions;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.triggerStage !== undefined)
-      dbUpdates.etapa_gatilho = updates.triggerStage ?? null;
+      dbUpdates.trigger_stage = updates.triggerStage ?? null;
 
     // Atualizar campanha no banco
     const { error } = await supabase
@@ -280,7 +279,7 @@ export async function deleteCampaignAction(campaignId: string): Promise<void> {
       throw new Error("Você não tem acesso a este workspace");
     }
 
-    // Deletar campanha (os leads serão atualizados para null no campanha_id devido ao ON DELETE SET NULL)
+    // Deletar campanha (os leads serão atualizados para null no campaign_id devido ao ON DELETE SET NULL)
     const { error } = await supabase
       .from("campaigns")
       .delete()

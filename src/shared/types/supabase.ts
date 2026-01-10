@@ -16,38 +16,38 @@ export type Database = {
     Tables: {
       campaigns: {
         Row: {
-          contexto: string
+          context: string
           created_at: string
-          etapa_gatilho: string | null
+          trigger_stage: string | null
           id: string
-          instrucoes_ia: string
-          nome: string
+          ai_instructions: string
+          name: string
           status: string
-          tom_de_voz: string
+          voice_tone: string
           updated_at: string
           workspace_id: string
         }
         Insert: {
-          contexto: string
+          context: string
           created_at?: string
-          etapa_gatilho?: string | null
+          trigger_stage?: string | null
           id?: string
-          instrucoes_ia: string
-          nome: string
+          ai_instructions: string
+          name: string
           status?: string
-          tom_de_voz: string
+          voice_tone: string
           updated_at?: string
           workspace_id: string
         }
         Update: {
-          contexto?: string
+          context?: string
           created_at?: string
-          etapa_gatilho?: string | null
+          trigger_stage?: string | null
           id?: string
-          instrucoes_ia?: string
-          nome?: string
+          ai_instructions?: string
+          name?: string
           status?: string
-          tom_de_voz?: string
+          voice_tone?: string
           updated_at?: string
           workspace_id?: string
         }
@@ -65,33 +65,33 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          nome: string
-          obrigatorio: boolean
-          opcoes: Json | null
-          ordem: number
-          tipo: string
+          name: string
+          required: boolean
+          options: Json | null
+          order: number
+          type: string
           updated_at: string
           workspace_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          nome: string
-          obrigatorio?: boolean
-          opcoes?: Json | null
-          ordem?: number
-          tipo: string
+          name: string
+          required?: boolean
+          options?: Json | null
+          order?: number
+          type: string
           updated_at?: string
           workspace_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          nome?: string
-          obrigatorio?: boolean
-          opcoes?: Json | null
-          ordem?: number
-          tipo?: string
+          name?: string
+          required?: boolean
+          options?: Json | null
+          order?: number
+          type?: string
           updated_at?: string
           workspace_id?: string
         }
@@ -107,66 +107,69 @@ export type Database = {
       }
       leads: {
         Row: {
-          campanha_id: string | null
-          cargo: string
+          avatar_url: string | null
+          campaign_id: string | null
+          position: string
           created_at: string
           custom_fields: Json | null
           email: string
-          empresa: string
-          faturamento: string | null
+          company: string
+          revenue: string | null
           id: string
           linkedin: string | null
-          nome: string
-          notas: string | null
-          responsavel_id: string | null
-          segmento: string | null
+          name: string
+          notes: string | null
+          responsible_id: string | null
+          segment: string | null
           stage: string
-          telefone: string
+          phone: string
           updated_at: string
           workspace_id: string
         }
         Insert: {
-          campanha_id?: string | null
-          cargo: string
+          avatar_url?: string | null
+          campaign_id?: string | null
+          position: string
           created_at?: string
           custom_fields?: Json | null
           email: string
-          empresa: string
-          faturamento?: string | null
+          company: string
+          revenue?: string | null
           id?: string
           linkedin?: string | null
-          nome: string
-          notas?: string | null
-          responsavel_id?: string | null
-          segmento?: string | null
+          name: string
+          notes?: string | null
+          responsible_id?: string | null
+          segment?: string | null
           stage?: string
-          telefone: string
+          phone: string
           updated_at?: string
           workspace_id: string
         }
         Update: {
-          campanha_id?: string | null
-          cargo?: string
+          avatar_url?: string | null
+          campaign_id?: string | null
+          position?: string
           created_at?: string
           custom_fields?: Json | null
           email?: string
-          empresa?: string
-          faturamento?: string | null
+          company?: string
+          revenue?: string | null
           id?: string
           linkedin?: string | null
-          nome?: string
-          notas?: string | null
-          responsavel_id?: string | null
-          segmento?: string | null
+          name?: string
+          notes?: string | null
+          responsible_id?: string | null
+          segment?: string | null
           stage?: string
-          telefone?: string
+          phone?: string
           updated_at?: string
           workspace_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "leads_campanha_id_fkey"
-            columns: ["campanha_id"]
+            foreignKeyName: "leads_campaign_id_fkey"
+            columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
@@ -299,7 +302,7 @@ export type Database = {
           created_at: string
           id: string
           logo_url: string | null
-          nome: string
+          name: string
           owner_id: string
           slug: string
           updated_at: string
@@ -308,7 +311,7 @@ export type Database = {
           created_at?: string
           id?: string
           logo_url?: string | null
-          nome: string
+          name: string
           owner_id: string
           slug: string
           updated_at?: string
@@ -317,7 +320,7 @@ export type Database = {
           created_at?: string
           id?: string
           logo_url?: string | null
-          nome?: string
+          name?: string
           owner_id?: string
           slug?: string
           updated_at?: string

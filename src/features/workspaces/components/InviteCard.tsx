@@ -42,9 +42,9 @@ export function InviteCard({
   const [copied, setCopied] = useState(false);
 
   const roleConfig: Record<WorkspaceRole, { label: string; icon: typeof Shield; variant: "secondary" | "outline" | "default" }> = {
-    admin: { label: "Admin", icon: Shield, variant: "secondary" as const },
+    admin: { label: "Administrador", icon: Shield, variant: "secondary" as const },
     member: { label: "Membro", icon: User, variant: "outline" as const },
-    owner: { label: "Owner", icon: Shield, variant: "default" as const },
+    owner: { label: "Proprietário", icon: Shield, variant: "default" as const },
   };
 
   const roleInfo = roleConfig[invite.role];

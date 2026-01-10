@@ -201,13 +201,9 @@ body {
   padding: 1rem;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   border-width: 1px;
-  cursor: grab;
+  cursor: pointer;
   transition-property: all;
   transition-duration: 200ms;
-}
-
-.lead-card:active {
-  cursor: grabbing;
 }
 
 .lead-card:hover {

@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, startTransition } from "react";
-import Image from "next/image";
-import { Button } from "@/shared/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/components/ui/dropdown-menu";
+  ArrowDown,
+  ArrowUp,
+  Crown,
+  MoreVertical,
+  Shield,
+  Trash2,
+  User,
+} from "lucide-react";
+import Image from "next/image";
+import { startTransition, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,14 +22,21 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { Badge } from "@/shared/components/ui/badge";
-import { MoreVertical, Crown, Shield, User, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
-import { useToast } from "@/shared/hooks/use-toast";
+import { Button } from "@/shared/components/ui/button";
 import {
-  updateMemberRoleAction,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import { useToast } from "@/shared/hooks/use-toast";
+import type { WorkspaceMember, WorkspaceRole } from "@/shared/types/crm";
+import {
   removeWorkspaceMemberAction,
   transferWorkspaceOwnershipAction,
+  updateMemberRoleAction,
 } from "../actions/members";
-import type { WorkspaceMember, WorkspaceRole } from "@/shared/types/crm";
 
 interface MemberCardProps {
   member: WorkspaceMember;
@@ -49,7 +56,7 @@ export function MemberCard({
   member,
   workspaceId,
   currentUserId,
-  currentUserRole,
+  currentUserRole: _currentUserRole,
   canManage,
   isOwner,
   onUpdate,
@@ -69,8 +76,12 @@ export function MemberCard({
   const isMemberOwner = member.role === "owner";
 
   const roleConfig = {
-    owner: { label: "Owner", icon: Crown, variant: "default" as const },
-    admin: { label: "Admin", icon: Shield, variant: "secondary" as const },
+    owner: { label: "Proprietário", icon: Crown, variant: "default" as const },
+    admin: {
+      label: "Administrador",
+      icon: Shield,
+      variant: "secondary" as const,
+    },
     member: { label: "Membro", icon: User, variant: "outline" as const },
   };
 
@@ -185,9 +196,9 @@ export function MemberCard({
 
       if (!result.success) {
         toast({
-          title: "Erro ao transferir ownership",
+          title: "Erro ao transferir propriedade",
           description:
-            result.error || "Não foi possível transferir a ownership",
+            result.error || "Não foi possível transferir a propriedade",
           variant: "destructive",
         });
         onUpdate?.();
@@ -195,8 +206,8 @@ export function MemberCard({
       }
 
       toast({
-        title: "Ownership transferida!",
-        description: `${member.user.fullName} agora é o owner do workspace`,
+        title: "Propriedade transferida!",
+        description: `${member.user.fullName} agora é o proprietário do workspace`,
       });
 
       startTransition(() => {
@@ -204,11 +215,11 @@ export function MemberCard({
       });
     } catch (error) {
       toast({
-        title: "Erro ao transferir ownership",
+        title: "Erro ao transferir propriedade",
         description:
           error instanceof Error
             ? error.message
-            : "Ocorreu um erro ao transferir a ownership",
+            : "Ocorreu um erro ao transferir a propriedade",
         variant: "destructive",
       });
       onUpdate?.();
@@ -219,9 +230,11 @@ export function MemberCard({
 
   const canChangeRole = canManage && !isMemberOwner && !isCurrentUser;
   const canRemove = canManage && !isMemberOwner && !isCurrentUser;
-  const canTransfer = isOwner && !isMemberOwner && !isCurrentUser && member.role === "admin";
-  
-  const hasRoleChange = canChangeRole && (member.role === "member" || member.role === "admin");
+  const canTransfer =
+    isOwner && !isMemberOwner && !isCurrentUser && member.role === "admin";
+
+  const hasRoleChange =
+    canChangeRole && (member.role === "member" || member.role === "admin");
   const hasTransfer = canTransfer;
   const hasRemove = canRemove;
 
@@ -261,85 +274,94 @@ export function MemberCard({
           </Badge>
         </div>
 
-        {canManage && !isCurrentUser && (hasRoleChange || hasTransfer || hasRemove) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="flex-shrink-0"
-                disabled={isUpdating}
-              >
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {canChangeRole && member.role === "member" && (
-                <DropdownMenuItem
-                  onClick={() => {
-                    setNewRole("admin");
-                    setShowRoleChangeDialog(true);
-                  }}
+        {canManage &&
+          !isCurrentUser &&
+          (hasRoleChange || hasTransfer || hasRemove) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0"
+                  disabled={isUpdating}
                 >
-                  <ArrowUp className="w-4 h-4 mr-2" />
-                  Promover para Administrador
-                </DropdownMenuItem>
-              )}
-
-              {canChangeRole && member.role === "admin" && (
-                <DropdownMenuItem
-                  onClick={() => {
-                    setNewRole("member");
-                    setShowRoleChangeDialog(true);
-                  }}
-                >
-                  <ArrowDown className="w-4 h-4 mr-2" />
-                  Rebaixar para Membro
-                </DropdownMenuItem>
-              )}
-
-              {hasTransfer && (
-                <>
-                  {hasRoleChange && <DropdownMenuSeparator />}
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canChangeRole && member.role === "member" && (
                   <DropdownMenuItem
-                    onClick={() => setShowTransferDialog(true)}
-                    className="text-amber-600 focus:text-amber-600"
+                    onClick={() => {
+                      setNewRole("admin");
+                      setShowRoleChangeDialog(true);
+                    }}
                   >
-                    <Crown className="w-4 h-4 mr-2" />
-                    Transferir Ownership
+                    <ArrowUp className="w-4 h-4 mr-2" />
+                    Promover para Administrador
                   </DropdownMenuItem>
-                </>
-              )}
+                )}
 
-              {hasRemove && (
-                <>
-                  {(hasRoleChange || hasTransfer) && <DropdownMenuSeparator />}
+                {canChangeRole && member.role === "admin" && (
                   <DropdownMenuItem
-                    onClick={() => setShowRemoveDialog(true)}
-                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      setNewRole("member");
+                      setShowRoleChangeDialog(true);
+                    }}
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Remover do Workspace
+                    <ArrowDown className="w-4 h-4 mr-2" />
+                    Rebaixar para Membro
                   </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                )}
+
+                {hasTransfer && (
+                  <>
+                    {hasRoleChange && <DropdownMenuSeparator />}
+                    <DropdownMenuItem
+                      onClick={() => setShowTransferDialog(true)}
+                      className="text-amber-600 focus:text-amber-600"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Transferir Propriedade
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {hasRemove && (
+                  <>
+                    {(hasRoleChange || hasTransfer) && (
+                      <DropdownMenuSeparator />
+                    )}
+                    <DropdownMenuItem
+                      onClick={() => setShowRemoveDialog(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remover do Workspace
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
       </div>
 
-      <AlertDialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+      <AlertDialog
+        open={showTransferDialog}
+        onOpenChange={setShowTransferDialog}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Transferir Ownership</AlertDialogTitle>
+            <AlertDialogTitle>Transferir Propriedade</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja transferir a ownership do workspace para{" "}
+              Tem certeza que deseja transferir a propriedade do workspace para{" "}
               <strong>{member.user.fullName}</strong>? Você se tornará um
               administrador após a transferência.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isUpdating}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleTransferOwnership}
               disabled={isUpdating}
@@ -356,12 +378,15 @@ export function MemberCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Remover Membro</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover <strong>{member.user.fullName}</strong>{" "}
-              do workspace? Esta ação não pode ser desfeita.
+              Tem certeza que deseja remover{" "}
+              <strong>{member.user.fullName}</strong> do workspace? Esta ação
+              não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isUpdating}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
               disabled={isUpdating}

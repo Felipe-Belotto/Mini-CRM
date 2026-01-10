@@ -1,46 +1,50 @@
 "use client";
 
-import { Sparkles, User } from "lucide-react";
+import { FileText, List, Mail, MessageSquare, Phone } from "lucide-react";
 import type React from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/shared/components/ui/sheet";
+import { useState } from "react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { AvatarUpload } from "@/shared/components/ui/avatar-upload";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTitle } from "@/shared/components/ui/sheet";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/shared/components/ui/tabs";
-import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import type { KanbanStage, Lead, ValidationError, Campaign } from "@/shared/types/crm";
+import { useToast } from "@/shared/hooks/use-toast";
+import type { Lead, User as UserType } from "@/shared/types/crm";
+import { uploadLeadAvatarAction } from "../actions/upload-avatar";
 import { useLeadDrawer } from "../hooks/use-lead-drawer";
-import { useMessageSender } from "../hooks/use-message-sender";
-import { LeadEditForm } from "./LeadEditForm";
-import { LeadAISection } from "./LeadAISection";
+import { getInitials } from "../lib/avatar-utils";
+import { LeadDetailsTab } from "./LeadDetailsTab";
+import { LeadMessagesTab } from "./LeadMessagesTab";
+import { LeadNotesTab } from "./LeadNotesTab";
 
 interface LeadDrawerProps {
   lead: Lead | null;
   isOpen: boolean;
+  users: UserType[];
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Lead>) => Promise<void>;
-  onMoveLead: (
-    leadId: string,
-    newStage: KanbanStage,
-  ) => Promise<ValidationError[] | null>;
-  campaigns?: Campaign[];
 }
 
 export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   lead,
   isOpen,
+  users,
   onClose,
   onUpdate,
-  onMoveLead,
-  campaigns = [],
 }) => {
+  const { user: currentUser } = useAuth();
+  const { currentWorkspace } = useWorkspace();
+  const { toast } = useToast();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+
   const mockLead: Lead = {
     id: "",
     name: "",
@@ -56,24 +60,15 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
 
   const actualLead = lead || mockLead;
 
-  const {
-    customFields,
-    activeCampaigns,
-    selectedCampaignId,
-    setSelectedCampaignId,
-    getCustomFieldValue,
-    isGenerating,
-    showSuggestions,
-    suggestions,
-    handleGenerateSuggestions,
-  } = useLeadDrawer({ lead: actualLead, campaigns });
-
-  const { sendingMessage, sendMessage } = useMessageSender({
+  const { customFields, getCustomFieldValue } = useLeadDrawer({
     lead: actualLead,
-    onMoveLead,
+    campaigns: [],
   });
 
   if (!lead) return null;
+
+  // Convert single responsibleId to array for MultiResponsibleSelect
+  const responsibleIds = lead.responsibleId ? [lead.responsibleId] : [];
 
   const handleCustomFieldChange = (fieldId: string, value: string) => {
     const field = customFields.find((f) => f.id === fieldId);
@@ -86,70 +81,169 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
     }
   };
 
-  const handleSendMessage = async (messageType: string) => {
-    await sendMessage(messageType);
+  const handleAvatarChange = async (file: File | null) => {
+    setAvatarFile(file);
+
+    if (file && currentWorkspace) {
+      setIsUploadingAvatar(true);
+      try {
+        const result = await uploadLeadAvatarAction(
+          lead.id,
+          currentWorkspace.id,
+          file,
+        );
+
+        if (result.success && result.url) {
+          await onUpdate(lead.id, { avatarUrl: result.url });
+          setAvatarFile(null);
+          toast({
+            title: "Avatar atualizado",
+            description: "O avatar do lead foi atualizado com sucesso.",
+          });
+        } else {
+          toast({
+            title: "Erro ao fazer upload",
+            description:
+              result.error || "Não foi possível fazer upload do avatar",
+            variant: "destructive",
+          });
+          setAvatarFile(null);
+        }
+      } catch (error) {
+        toast({
+          title: "Erro ao fazer upload",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Ocorreu um erro ao fazer upload do avatar",
+          variant: "destructive",
+        });
+        setAvatarFile(null);
+      } finally {
+        setIsUploadingAvatar(false);
+      }
+    }
+  };
+
+  const handleAvatarRemove = () => {
+    setAvatarFile(null);
+    onUpdate(lead.id, { avatarUrl: undefined });
+  };
+
+  const handleResponsibleChange = async (responsibleIds: string[]) => {
+    // Por enquanto, pega o primeiro responsável do array
+    // TODO: Criar tabela de relacionamento para múltiplos responsáveis
+    const responsibleId =
+      responsibleIds.length > 0 ? responsibleIds[0] : undefined;
+    await onUpdate(lead.id, { responsibleId });
   };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg flex flex-col p-0">
-        <div className="flex-shrink-0 p-6 border-b">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-left">{lead.name || "Lead sem nome"}</p>
-                <p className="text-sm font-normal text-muted-foreground">
+      <SheetContent className="w-full sm:max-w-2xl flex flex-col p-0">
+        {/* Header com avatar e informações do lead */}
+        <div className="flex-shrink-0 bg-muted border-b px-6 py-5">
+          <div className="flex items-start gap-5">
+            <AvatarUpload
+              value={avatarFile || lead.avatarUrl || null}
+              onChange={handleAvatarChange}
+              onRemove={handleAvatarRemove}
+              disabled={isUploadingAvatar}
+              size="md"
+              fallbackText={getInitials(lead.name || "")}
+              className="flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <SheetTitle className="text-xl font-semibold mb-1 truncate text-foreground">
+                {lead.name || "Sem nome"}
+              </SheetTitle>
+              {(lead.position || lead.company) && (
+                <p className="text-sm text-muted-foreground mb-2">
+                  {lead.position}
+                  {lead.position && lead.company && " • "}
                   {lead.company}
                 </p>
+              )}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {lead.email && (
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>{lead.email}</span>
+                  </div>
+                )}
+                {lead.phone && (
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>{lead.phone}</span>
+                  </div>
+                )}
               </div>
-            </SheetTitle>
-          </SheetHeader>
+            </div>
+          </div>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-6">
-            <Tabs defaultValue="edit" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="edit" className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Edição
-                </TabsTrigger>
-                <TabsTrigger value="ai" className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  IA
-                </TabsTrigger>
-              </TabsList>
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
+          <div className="flex-shrink-0 border-b">
+            <TabsList className="w-full justify-start rounded-none border-b-0 h-auto p-0 bg-transparent">
+              <TabsTrigger
+                value="details"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
+              >
+                <List className="w-4 h-4 mr-2" />
+                Detalhes
+              </TabsTrigger>
+              <TabsTrigger
+                value="notes"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Notas
+              </TabsTrigger>
+              <TabsTrigger
+                value="messages"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Mensagens
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-              <TabsContent value="edit" className="space-y-4">
-                <LeadEditForm
+          <ScrollArea className="flex-1">
+            <div className="p-6">
+              <TabsContent value="details" className="mt-0">
+                <LeadDetailsTab
                   lead={lead}
+                  users={users}
                   customFields={customFields}
                   getCustomFieldValue={getCustomFieldValue}
                   onUpdate={onUpdate}
                   onCustomFieldChange={handleCustomFieldChange}
+                  onResponsibleChange={handleResponsibleChange}
+                  responsibleIds={responsibleIds}
                 />
               </TabsContent>
 
-              <TabsContent value="ai" className="space-y-4">
-                <LeadAISection
+              <TabsContent value="notes" className="mt-0">
+                <LeadNotesTab
                   lead={lead}
-                  activeCampaigns={activeCampaigns}
-                  selectedCampaignId={selectedCampaignId}
-                  onCampaignChange={setSelectedCampaignId}
-                  isGenerating={isGenerating}
-                  showSuggestions={showSuggestions}
-                  suggestions={suggestions}
-                  onGenerate={handleGenerateSuggestions}
-                  onSendMessage={handleSendMessage}
-                  sendingMessage={sendingMessage}
+                  users={users}
+                  currentUserId={currentUser?.id}
+                  onUpdate={onUpdate}
                 />
               </TabsContent>
-            </Tabs>
-          </div>
-        </ScrollArea>
+
+              <TabsContent value="messages" className="mt-0">
+                <LeadMessagesTab lead={lead} />
+              </TabsContent>
+            </div>
+          </ScrollArea>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

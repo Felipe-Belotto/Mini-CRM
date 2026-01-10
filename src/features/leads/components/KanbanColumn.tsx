@@ -14,6 +14,7 @@ import type {
   KanbanColumn as KanbanColumnType,
   Lead,
   KanbanStage,
+  User,
 } from "@/shared/types/crm";
 import { getKanbanColorClass } from "../lib/kanban-utils";
 import { LeadCard } from "./LeadCard";
@@ -21,6 +22,7 @@ import { LeadCard } from "./LeadCard";
 interface KanbanColumnProps {
   column: KanbanColumnType;
   leads: Lead[];
+  users?: User[];
   onLeadSelect: (lead: Lead) => void;
   onCreateLead?: (stage: KanbanStage) => void;
 }
@@ -28,6 +30,7 @@ interface KanbanColumnProps {
 export const KanbanColumnComponent: React.FC<KanbanColumnProps> = ({
   column,
   leads,
+  users = [],
   onLeadSelect,
   onCreateLead,
 }) => {
@@ -70,7 +73,12 @@ export const KanbanColumnComponent: React.FC<KanbanColumnProps> = ({
         >
           <div className="space-y-2">
             {leads.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} onSelect={onLeadSelect} />
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                users={users}
+                onSelect={onLeadSelect}
+              />
             ))}
           </div>
         </SortableContext>

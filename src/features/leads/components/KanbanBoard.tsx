@@ -1,22 +1,24 @@
 "use client";
 
 import {
-  closestCorners,
   DndContext,
   type DragEndEvent,
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/shared/hooks/use-toast";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import {
   KANBAN_COLUMNS,
   type KanbanStage,
   type Lead,
+  type User,
   type ValidationError,
 } from "@/shared/types/crm";
 import { getLeadsByStage } from "../lib/lead-utils";
@@ -25,6 +27,7 @@ import { LeadCard } from "./LeadCard";
 
 interface KanbanBoardProps {
   leads: Lead[];
+  users?: User[];
   onMoveLead: (
     leadId: string,
     newStage: KanbanStage,
@@ -35,12 +38,19 @@ interface KanbanBoardProps {
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   leads,
+  users = [],
   onMoveLead,
   onLeadSelect,
   onCreateLead,
 }) => {
   const { toast } = useToast();
-  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [optimisticLeads, setOptimisticLeads] = useState<Lead[]>(leads);
+
+  // Sincroniza o estado local quando os leads do servidor mudam
+  useEffect(() => {
+    setOptimisticLeads(leads);
+  }, [leads]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -48,6 +58,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         distance: 8,
       },
     }),
+  );
+
+  // Estratégia de colisão customizada: prioriza pointerWithin, fallback para rectIntersection
+  const collisionDetection = useCallback(
+    (args: Parameters<typeof pointerWithin>[0]) => {
+      const pointerCollisions = pointerWithin(args);
+      if (pointerCollisions.length > 0) {
+        return pointerCollisions;
+      }
+      return rectIntersection(args);
+    },
+    [],
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -63,11 +85,31 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const leadId = active.id as string;
     const targetStage = over.id as KanbanStage;
 
+    // Verifica se é uma coluna válida
     if (!KANBAN_COLUMNS.find((c) => c.id === targetStage)) return;
 
+    // Encontra o lead atual
+    const currentLead = optimisticLeads.find((l) => l.id === leadId);
+    if (!currentLead) return;
+
+    // Se o lead já está na mesma coluna, não faz nada
+    if (currentLead.stage === targetStage) return;
+
+    // Atualização otimista: move o lead imediatamente na UI
+    const previousLeads = [...optimisticLeads];
+    setOptimisticLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === leadId ? { ...lead, stage: targetStage } : lead,
+      ),
+    );
+
+    // Chama o servidor
     const errors = await onMoveLead(leadId, targetStage);
 
     if (errors && errors.length > 0) {
+      // Reverte a atualização otimista
+      setOptimisticLeads(previousLeads);
+
       toast({
         title: "Não foi possível mover o lead",
         description: (
@@ -85,12 +127,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };
 
-  const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
+  const activeLead = activeId
+    ? optimisticLeads.find((l) => l.id === activeId)
+    : null;
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -100,7 +144,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <KanbanColumnComponent
               key={column.id}
               column={column}
-              leads={getLeadsByStage(leads, column.id)}
+              leads={getLeadsByStage(optimisticLeads, column.id)}
+              users={users}
               onLeadSelect={onLeadSelect}
               onCreateLead={onCreateLead}
             />
@@ -109,7 +154,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       </ScrollArea>
 
       <DragOverlay>
-        {activeLead && <LeadCard lead={activeLead} onSelect={() => {}} />}
+        {activeLead && (
+          <LeadCard lead={activeLead} users={users} onSelect={() => {}} />
+        )}
       </DragOverlay>
     </DndContext>
   );

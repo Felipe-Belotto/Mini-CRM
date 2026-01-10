@@ -17,6 +17,7 @@ export interface User {
   avatarUrl?: string;
   phone?: string;
   bio?: string;
+  role?: "owner" | "admin" | "member";
   createdAt: Date;
 }
 
@@ -42,6 +43,8 @@ export interface Lead {
   revenue?: string;
   linkedIn?: string;
   notes?: string;
+  messages?: string;
+  avatarUrl?: string;
   stage: KanbanStage;
   campaignId?: string;
   responsibleId?: string;

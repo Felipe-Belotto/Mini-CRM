@@ -78,11 +78,11 @@ export function CampaignForm({ formData, onFieldChange }: CampaignFormProps) {
       <div className="grid gap-2">
         <Label htmlFor="triggerStage">Etapa Gatilho (Opcional)</Label>
         <Select
-          value={formData.triggerStage || ""}
+          value={formData.triggerStage || "none"}
           onValueChange={(value) =>
             onFieldChange(
               "triggerStage",
-              value === "" ? undefined : (value as any),
+              value === "none" ? undefined : (value as any),
             )
           }
         >
@@ -90,7 +90,7 @@ export function CampaignForm({ formData, onFieldChange }: CampaignFormProps) {
             <SelectValue placeholder="Selecione uma etapa gatilho" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Nenhuma</SelectItem>
+            <SelectItem value="none">Nenhuma</SelectItem>
             {KANBAN_COLUMNS.filter(
               (col) => col.id !== "base" && col.id !== "desqualificado",
             ).map((col) => (

@@ -5,7 +5,6 @@ import {
   Calendar,
   Megaphone,
   Target,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import type React from "react";
@@ -15,12 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { getLeadsCountByStage } from "@/shared/data/mockData";
 import { cn } from "@/shared/lib/utils";
 import type { Campaign, Lead } from "@/shared/types/crm";
 import {
   calculateQualifiedLeads,
   getActiveCampaignsCount,
+  getLeadsCountByStage,
 } from "../lib/metrics-utils";
 
 interface MetricCardProps {
@@ -83,15 +82,11 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({
         title="Total de Leads"
         value={leads.length}
         icon={Users}
-        trend="+12% este mês"
-        trendUp={true}
       />
       <MetricCard
         title="Leads Qualificados"
         value={qualifiedLeads}
         icon={Target}
-        trend="+8% vs semana passada"
-        trendUp={true}
       />
       <MetricCard
         title="Campanhas Ativas"
@@ -102,8 +97,6 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({
         title="Reuniões Agendadas"
         value={stageCounts.reuniao_agendada}
         icon={Calendar}
-        trend="+3 esta semana"
-        trendUp={true}
       />
     </div>
   );

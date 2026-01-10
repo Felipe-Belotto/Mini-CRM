@@ -8,9 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { getLeadsCountByStage } from "@/shared/data/mockData";
 import { cn } from "@/shared/lib/utils";
 import { KANBAN_COLUMNS, type Lead } from "@/shared/types/crm";
+import { getLeadsCountByStage } from "../lib/metrics-utils";
 
 interface LeadsByStageChartProps {
   leads: Lead[];

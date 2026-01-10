@@ -8,12 +8,13 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { CreateLeadForm } from "./CreateLeadForm";
-import type { KanbanStage, Lead } from "@/shared/types/crm";
+import type { KanbanStage, Lead, User } from "@/shared/types/crm";
 
 interface CreateLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialStage?: KanbanStage;
+  users: User[];
   onCreateLead: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt">) => Promise<void>;
 }
 
@@ -21,6 +22,7 @@ export function CreateLeadDialog({
   open,
   onOpenChange,
   initialStage,
+  users,
   onCreateLead,
 }: CreateLeadDialogProps) {
   const handleSuccess = async () => {
@@ -38,8 +40,9 @@ export function CreateLeadDialog({
         </DialogHeader>
         <CreateLeadForm
           initialStage={initialStage}
-          onSubmit={async (lead) => {
-            await onCreateLead(lead);
+          users={users}
+          onSubmit={async () => {
+            // O lead já foi criado no CreateLeadForm, apenas fechar o dialog
             handleSuccess();
           }}
           onCancel={() => onOpenChange(false)}

@@ -35,14 +35,14 @@ function mapDbCustomFieldToCustomField(dbField: CustomFieldRow): CustomField {
   return {
     id: dbField.id,
     workspaceId: dbField.workspace_id,
-    name: dbField.nome,
-    type: dbField.tipo as CustomField["type"],
-    required: dbField.obrigatorio,
+    name: dbField.name,
+    type: dbField.type as CustomField["type"],
+    required: dbField.required,
     options:
-      dbField.opcoes && Array.isArray(dbField.opcoes)
-        ? (dbField.opcoes as string[])
+      dbField.options && Array.isArray(dbField.options)
+        ? (dbField.options as string[])
         : undefined,
-    order: dbField.ordem,
+    order: dbField.order,
     createdAt: new Date(dbField.created_at),
   };
 }
@@ -87,11 +87,11 @@ export async function createCustomFieldAction(
       .from("custom_fields")
       .insert({
         workspace_id: input.workspaceId,
-        nome: input.name.trim(),
-        tipo: input.type,
-        obrigatorio: input.required,
-        opcoes: input.options ? (input.options as unknown) : null,
-        ordem: input.order,
+        name: input.name.trim(),
+        type: input.type,
+        required: input.required,
+        options: input.options ? (input.options as unknown) : null,
+        order: input.order,
       })
       .select()
       .single();
@@ -168,15 +168,15 @@ export async function updateCustomFieldAction(
     // Preparar updates para o banco
     const dbUpdates: Record<string, unknown> = {};
 
-    if (input.name !== undefined) dbUpdates.nome = input.name.trim();
-    if (input.type !== undefined) dbUpdates.tipo = input.type;
+    if (input.name !== undefined) dbUpdates.name = input.name.trim();
+    if (input.type !== undefined) dbUpdates.type = input.type;
     if (input.required !== undefined)
-      dbUpdates.obrigatorio = input.required;
+      dbUpdates.required = input.required;
     if (input.options !== undefined)
-      dbUpdates.opcoes = input.options
+      dbUpdates.options = input.options
         ? (input.options as unknown)
         : null;
-    if (input.order !== undefined) dbUpdates.ordem = input.order;
+    if (input.order !== undefined) dbUpdates.order = input.order;
 
     // Atualizar campo no banco
     const { data: dbField, error } = await supabase
@@ -288,7 +288,7 @@ export async function getCustomFieldsAction(
       .from("custom_fields")
       .select("*")
       .eq("workspace_id", workspaceId)
-      .order("ordem", { ascending: true });
+      .order("order", { ascending: true });
 
     if (error) {
       console.error("Error fetching custom fields:", error);
