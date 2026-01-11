@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { useToast } from "@/shared/hooks/use-toast";
 import { updatePipelineConfigAction } from "../actions/pipeline-config";
+import { getConfigurableStages, getStageNames, getAvailableFields } from "../lib/pipeline-utils";
 import { StageConfigForm } from "./StageConfigForm";
 import { StagesList } from "./StagesList";
 import type {
@@ -23,7 +24,6 @@ import type {
   PipelineStage,
   CustomField,
 } from "@/shared/types/crm";
-import { KANBAN_COLUMNS } from "@/shared/types/crm";
 
 interface PipelineConfigManagerProps {
   initialConfig: PipelineConfig | null;
@@ -46,46 +46,22 @@ export function PipelineConfigManager({
   );
   const [activeTab, setActiveTab] = useState("stages");
 
-  // Usar etapas dinâmicas se disponíveis
   const stages = initialStages.length > 0 ? initialStages : [];
   
-  // Filtrar etapas configuráveis (excluindo 'base' e 'desqualificado')
-  const configurableStages: KanbanStage[] = stages.length > 0
-    ? stages
-        .filter(s => !s.isHidden && s.slug !== "base" && s.slug !== "desqualificado")
-        .map(s => s.slug as KanbanStage)
-    : [
-        "lead_mapeado",
-        "tentando_contato",
-        "conexao_iniciada",
-        "qualificado",
-        "reuniao_agendada",
-      ];
+  const configurableStages = useMemo(
+    () => getConfigurableStages(stages),
+    [stages]
+  );
 
-  // Mapa de nomes das etapas
-  const stageNames: Record<string, string> = useMemo(() => {
-    if (stages.length > 0) {
-      return Object.fromEntries(stages.map(s => [s.slug, s.name]));
-    }
-    return Object.fromEntries(KANBAN_COLUMNS.map(c => [c.id, c.title]));
-  }, [stages]);
+  const stageNames = useMemo(
+    () => getStageNames(stages),
+    [stages]
+  );
 
-  const availableFields = useMemo(() => {
-    const defaultFields = [
-      { id: "nome", nome: "Nome" },
-      { id: "email", nome: "Email" },
-      { id: "telefone", nome: "Telefone" },
-      { id: "cargo", nome: "Cargo" },
-      { id: "empresa", nome: "Empresa" },
-    ];
-
-    const customFieldsMapped = initialCustomFields.map((f) => ({
-      id: f.id,
-      nome: f.name,
-    }));
-
-    return [...defaultFields, ...customFieldsMapped];
-  }, [initialCustomFields]);
+  const availableFields = useMemo(
+    () => getAvailableFields(initialCustomFields),
+    [initialCustomFields]
+  );
 
   const handleStageChange = (stage: KanbanStage, requiredFields: string[]) => {
     setLocalConfig((prev) => {

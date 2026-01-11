@@ -31,14 +31,6 @@ export function StageConfigForm({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="font-medium mb-2">{stageColumn?.title}</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Selecione os campos obrigatórios para que um lead possa entrar nesta
-          etapa
-        </p>
-      </div>
-
       <div className="space-y-2">
         {availableFields.map((field) => (
           <div key={field.id} className="flex items-center space-x-2">

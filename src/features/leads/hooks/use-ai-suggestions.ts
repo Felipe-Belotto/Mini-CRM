@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Campaign, Lead, CustomField } from "@/shared/types/crm";
+import type { Campaign, Lead, CustomField, AISuggestion } from "@/shared/types/crm";
 import { generateMessagesAction } from "@/features/ai-messages/actions/ai-messages";
-import type { AISuggestion } from "../lib/message-utils";
 import { useToast } from "@/shared/hooks/use-toast";
 
 export function useAISuggestions() {

@@ -11,7 +11,7 @@ import {
   type UpdateCustomFieldInput,
 } from "../actions/custom-fields";
 import { useToast } from "@/shared/hooks/use-toast";
-import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { useWorkspace } from "@/shared/hooks/use-workspace";
 
 interface UseCustomFieldsReturn {
   fields: CustomField[];

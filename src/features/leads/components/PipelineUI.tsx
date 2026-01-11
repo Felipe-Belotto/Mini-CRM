@@ -1,26 +1,20 @@
 "use client";
 
 import type React from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useOptimistic,
-  useState,
-  useTransition,
-} from "react";
-import { useSearchParams } from "next/navigation";
 import type {
   Campaign,
   CustomField,
   Lead,
+  PipelineStage,
   User,
 } from "@/shared/types/crm";
-import { useToast } from "@/shared/hooks/use-toast";
-import { promoteEligibleLeadsAction, reorderLeadsAction } from "../actions/leads";
-import { countEligibleLeadsForPromotion } from "../lib/lead-utils";
 import { useLeadFilters } from "../hooks/use-lead-filters";
+import { useLeadPromotion } from "../hooks/use-lead-promotion";
+import { useOptimisticLeads } from "../hooks/use-optimistic-leads";
+import { usePipelineData } from "../hooks/use-pipeline-data";
+import { usePipelineOperations } from "../hooks/use-pipeline-operations";
 import { usePipelineUI } from "../hooks/use-pipeline-ui";
+import { usePipelineUrlSync } from "../hooks/use-pipeline-url-sync";
 import { CreateLeadDialog } from "./CreateLeadDialog";
 import { KanbanBoard } from "./KanbanBoard";
 import { LeadDrawer } from "./LeadDrawer";
@@ -32,13 +26,9 @@ interface PipelineUIProps {
   campaigns?: Campaign[];
   users?: User[];
   customFields?: CustomField[];
+  stages?: PipelineStage[];
   onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
 }
-
-type OptimisticAction =
-  | { type: "archive"; leadId: string }
-  | { type: "restore"; leadId: string }
-  | { type: "delete"; leadId: string };
 
 export const PipelineUI: React.FC<PipelineUIProps> = ({
   leads: serverLeads,
@@ -46,9 +36,9 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
   campaigns = [],
   users = [],
   customFields = [],
+  stages,
   onUpdateLead,
 }) => {
-  const searchParams = useSearchParams();
   const {
     selectedLead,
     isDrawerOpen,
@@ -61,74 +51,16 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
     handleMoveLead,
   } = usePipelineUI();
 
-  // Estado otimista para leads ativos
-  const [optimisticLeads, setOptimisticLeads] = useOptimistic(
-    serverLeads,
-    (state, action: OptimisticAction) => {
-      if (action.type === "archive" || action.type === "delete") {
-        return state.filter((lead) => lead.id !== action.leadId);
-      }
-      if (action.type === "restore") {
-        const restoredLead = serverArchivedLeads.find(
-          (l) => l.id === action.leadId,
-        );
-        if (restoredLead) {
-          return [...state, { ...restoredLead, archivedAt: undefined }];
-        }
-      }
-      return state;
-    },
-  );
-
-  // Estado otimista para leads arquivados
-  const [optimisticArchivedLeads, setOptimisticArchivedLeads] = useOptimistic(
-    serverArchivedLeads,
-    (state, action: OptimisticAction) => {
-      if (action.type === "restore" || action.type === "delete") {
-        return state.filter((lead) => lead.id !== action.leadId);
-      }
-      if (action.type === "archive") {
-        const archivedLead = serverLeads.find((l) => l.id === action.leadId);
-        if (archivedLead) {
-          return [...state, { ...archivedLead, archivedAt: new Date() }];
-        }
-      }
-      return state;
-    },
-  );
-
-  const [isPending, startTransition] = useTransition();
-
-  // Handlers otimistas
-  const handleOptimisticArchive = useCallback(
-    (leadId: string) => {
-      startTransition(() => {
-        setOptimisticLeads({ type: "archive", leadId });
-        setOptimisticArchivedLeads({ type: "archive", leadId });
-      });
-    },
-    [setOptimisticLeads, setOptimisticArchivedLeads],
-  );
-
-  const handleOptimisticRestore = useCallback(
-    (leadId: string) => {
-      startTransition(() => {
-        setOptimisticLeads({ type: "restore", leadId });
-        setOptimisticArchivedLeads({ type: "restore", leadId });
-      });
-    },
-    [setOptimisticLeads, setOptimisticArchivedLeads],
-  );
-
-  const handleOptimisticDelete = useCallback(
-    (leadId: string) => {
-      startTransition(() => {
-        setOptimisticLeads({ type: "delete", leadId });
-        setOptimisticArchivedLeads({ type: "delete", leadId });
-      });
-    },
-    [setOptimisticLeads, setOptimisticArchivedLeads],
-  );
+  const {
+    optimisticLeads,
+    optimisticArchivedLeads,
+    handleOptimisticArchive,
+    handleOptimisticRestore,
+    handleOptimisticDelete,
+  } = useOptimisticLeads({
+    leads: serverLeads,
+    archivedLeads: serverArchivedLeads,
+  });
 
   const {
     filters,
@@ -146,81 +78,25 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
     customFields,
   });
 
-  const { toast } = useToast();
-  const [isPromoting, setIsPromoting] = useState(false);
+  const { allLeads, currentLead } = usePipelineData({
+    optimisticLeads,
+    optimisticArchivedLeads,
+    selectedLead,
+  });
 
-  // Conta leads elegíveis para promoção
-  const eligibleForPromotionCount = useMemo(
-    () => countEligibleLeadsForPromotion(optimisticLeads),
-    [optimisticLeads]
-  );
+  const { eligibleForPromotionCount, isPromoting, handlePromoteEligibleLeads } =
+    useLeadPromotion({
+      leads: optimisticLeads,
+    });
 
-  // Handler para reordenar leads
-  const handleReorderLeads = useCallback(
-    async (leadUpdates: { id: string; sortOrder: number }[]) => {
-      await reorderLeadsAction(leadUpdates);
-    },
-    [],
-  );
+  const { handleReorderLeads } = usePipelineOperations();
 
-  // Handler para promover leads elegíveis
-  const handlePromoteEligibleLeads = useCallback(async () => {
-    setIsPromoting(true);
-    try {
-      const result = await promoteEligibleLeadsAction();
-      
-      if (result.success) {
-        if (result.promotedCount > 0) {
-          toast({
-            title: "Leads promovidos!",
-            description: `${result.promotedCount} lead${result.promotedCount > 1 ? "s" : ""} ${result.promotedCount > 1 ? "foram movidos" : "foi movido"} para "Lead Mapeado".`,
-          });
-        } else {
-          toast({
-            title: "Nenhum lead elegível",
-            description: "Não há leads na Base que atendam aos critérios de promoção.",
-            variant: "default",
-          });
-        }
-      } else {
-        toast({
-          title: "Erro ao promover leads",
-          description: result.error || "Ocorreu um erro inesperado.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error promoting leads:", error);
-      toast({
-        title: "Erro ao promover leads",
-        description: "Ocorreu um erro inesperado.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPromoting(false);
-    }
-  }, [toast]);
-
-  // Sincroniza o selectedLead com a lista de leads atualizada (incluindo arquivados)
-  const allLeads = useMemo(
-    () => [...optimisticLeads, ...optimisticArchivedLeads],
-    [optimisticLeads, optimisticArchivedLeads],
-  );
-  const currentLead = useMemo(() => {
-    if (!selectedLead) return null;
-    return allLeads.find((l) => l.id === selectedLead.id) || selectedLead;
-  }, [selectedLead, allLeads]);
-
-  useEffect(() => {
-    const leadIdFromParams = searchParams.get("lead");
-    if (leadIdFromParams && !isDrawerOpen && allLeads.length > 0) {
-      const leadFromParams = allLeads.find((l) => l.id === leadIdFromParams);
-      if (leadFromParams && (!selectedLead || selectedLead.id !== leadIdFromParams)) {
-        handleLeadSelect(leadFromParams);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allLeads.length]);
+  usePipelineUrlSync({
+    allLeads,
+    selectedLead,
+    isDrawerOpen,
+    onLeadSelect: handleLeadSelect,
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -242,6 +118,7 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
         <KanbanBoard
           leads={filteredLeads}
           users={users}
+          stages={stages}
           onMoveLead={handleMoveLead}
           onReorderLeads={handleReorderLeads}
           onLeadSelect={handleLeadSelect}

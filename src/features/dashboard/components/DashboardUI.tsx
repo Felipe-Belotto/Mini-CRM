@@ -58,7 +58,6 @@ export const DashboardUI: React.FC<DashboardUIProps> = ({
         <CampaignsOverview campaigns={campaigns} />
       </div>
 
-      {/* Métricas Avançadas */}
       {advancedMetrics && (
         <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
           <div className="flex items-center justify-between">

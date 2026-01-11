@@ -43,8 +43,8 @@ export async function addCampaignActionVoid(
 export async function addCampaignFromFormAction(
   formData: Omit<Campaign, "id" | "createdAt" | "leadsCount" | "workspaceId">,
 ): Promise<void> {
-  const { getCurrentWorkspaceAction } = await import("@/features/workspaces/actions/workspaces");
-  const currentWorkspace = await getCurrentWorkspaceAction();
+  const { getCurrentWorkspace } = await import("@/shared/lib/workspace-utils");
+  const currentWorkspace = await getCurrentWorkspace();
   
   if (!currentWorkspace) {
     throw new Error("Nenhum workspace encontrado");

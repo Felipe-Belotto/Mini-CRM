@@ -50,29 +50,17 @@ import {
   type Lead,
   type User as UserType,
 } from "@/shared/types/crm";
-import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { useWorkspace } from "@/shared/hooks/use-workspace";
 import { createLeadAction } from "../actions/leads";
 import { getAvatarColor, getInitials } from "../lib/avatar-utils";
 import { uploadLeadAvatarAction } from "../actions/upload-avatar";
+import { parseJsonToFormData, type JsonLeadInput, type LeadFormData } from "../lib/json-import-utils";
 
 interface CreateLeadWizardProps {
   initialStage?: KanbanStage;
   users: UserType[];
   onSuccess: () => void;
   onCancel: () => void;
-}
-
-interface LeadFormData {
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  company: string;
-  origin: string;
-  stage: KanbanStage;
-  responsibleIds: string[];
-  notes: string;
-  avatarFile: File | null;
 }
 
 const STEPS = [
@@ -132,88 +120,6 @@ function mapStageToId(stage: string): KanbanStage {
     "reuniao agendada": "reuniao_agendada",
   };
   return stageMap[normalized] || "base";
-}
-
-interface JsonLeadInput {
-  // Formato direto (preferido)
-  name?: string;
-  email?: string;
-  phone?: string;
-  position?: string;
-  company?: string;
-  origin?: string;
-  stage?: string;
-  notes?: string;
-  linkedIn?: string;
-  // Formato alternativo (firstName + lastName)
-  firstName?: string;
-  lastName?: string;
-  // Mapeamentos alternativos
-  role?: string; // -> position
-  source?: string; // -> origin
-  telefone?: string; // -> phone
-  empresa?: string; // -> company
-  cargo?: string; // -> position
-  origem?: string; // -> origin
-  etapa?: string; // -> stage
-  observacoes?: string; // -> notes
-  notas?: string; // -> notes
-}
-
-function parseJsonToFormData(
-  json: JsonLeadInput,
-  currentData: LeadFormData
-): Partial<LeadFormData> {
-  const data: Partial<LeadFormData> = {};
-
-  // Nome: suporta "name" ou "firstName + lastName"
-  if (json.name) {
-    data.name = json.name.trim();
-  } else if (json.firstName || json.lastName) {
-    data.name = [json.firstName, json.lastName]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-  }
-
-  // Email
-  if (json.email) {
-    data.email = json.email.trim();
-  }
-
-  // Phone: suporta "phone" ou "telefone"
-  if (json.phone || json.telefone) {
-    data.phone = (json.phone || json.telefone || "").trim();
-  }
-
-  // Position: suporta "position", "role" ou "cargo"
-  if (json.position || json.role || json.cargo) {
-    data.position = (json.position || json.role || json.cargo || "").trim();
-  }
-
-  // Company: suporta "company" ou "empresa"
-  if (json.company || json.empresa) {
-    data.company = (json.company || json.empresa || "").trim();
-  }
-
-  // Origin: suporta "origin", "source" ou "origem" e mapeia para id
-  const originValue = json.origin || json.source || json.origem;
-  if (originValue) {
-    data.origin = mapOriginToId(originValue);
-  }
-
-  // Stage: suporta "stage" ou "etapa"
-  const stageValue = json.stage || json.etapa;
-  if (stageValue) {
-    data.stage = mapStageToId(stageValue);
-  }
-
-  // Notes: suporta "notes", "observacoes" ou "notas"
-  if (json.notes || json.observacoes || json.notas) {
-    data.notes = (json.notes || json.observacoes || json.notas || "").trim();
-  }
-
-  return data;
 }
 
 export function CreateLeadWizard({

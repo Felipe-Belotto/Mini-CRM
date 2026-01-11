@@ -17,7 +17,7 @@ import { AvatarUpload } from "@/shared/components/ui/avatar-upload";
 import { useToast } from "@/shared/hooks/use-toast";
 import { LEAD_ORIGINS, type KanbanStage, type Lead, type User as UserType } from "@/shared/types/crm";
 import { MultiResponsibleSelect } from "./MultiResponsibleSelect";
-import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { useWorkspace } from "@/shared/hooks/use-workspace";
 import { createLeadAction } from "../actions/leads";
 import { uploadLeadAvatarAction } from "../actions/upload-avatar";
 

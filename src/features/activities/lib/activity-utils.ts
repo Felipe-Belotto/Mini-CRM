@@ -1,4 +1,28 @@
-import type { ActivityActionType, LeadActivity } from "../types";
+import { createClient } from "@/shared/lib/supabase/server";
+import type { ActivityActionType, CreateActivityInput, LeadActivity } from "../types";
+
+export async function createActivity(input: CreateActivityInput): Promise<void> {
+  try {
+    const supabase = await createClient();
+
+    const { error } = await supabase.from("lead_activities").insert({
+      lead_id: input.leadId,
+      workspace_id: input.workspaceId,
+      user_id: input.userId || null,
+      action_type: input.actionType,
+      field_name: input.fieldName || null,
+      old_value: input.oldValue ?? null,
+      new_value: input.newValue ?? null,
+      metadata: input.metadata ?? null,
+    });
+
+    if (error) {
+      console.error("Error creating activity:", error);
+    }
+  } catch (error) {
+    console.error("Error in createActivity:", error);
+  }
+}
 
 /**
  * Retorna o ícone apropriado para cada tipo de atividade

@@ -1,22 +1,22 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { Plus } from "lucide-react";
 import type React from "react";
 import { Button } from "@/shared/components/ui/button";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { cn } from "@/shared/lib/utils";
 import type {
   KanbanColumn as KanbanColumnType,
-  Lead,
   KanbanStage,
+  Lead,
   User,
 } from "@/shared/types/crm";
-import { getKanbanColorClass } from "../lib/kanban-utils";
+import { getKanbanBgColorClass } from "../lib/kanban-utils";
 import { LeadCard } from "./LeadCard";
 
 interface KanbanColumnProps {
@@ -38,16 +38,20 @@ export const KanbanColumnComponent: React.FC<KanbanColumnProps> = ({
     id: column.id,
   });
 
+  const topBorderColor = getKanbanBgColorClass(column.color);
+
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "kanban-column border-t-4 transition-all duration-200 flex flex-col h-full overflow-hidden",
-        getKanbanColorClass(column.color),
+        "kanban-column transition-all duration-200 flex flex-col h-full overflow-hidden rounded-lg bg-card relative",
         isOver && "bg-accent/10 ring-2 ring-accent/30",
       )}
     >
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+      {/* Borda colorida no topo usando uma div */}
+      <div className={cn("absolute top-0 left-0 right-0 h-1 rounded-t-lg", topBorderColor)} />
+      
+      <div className="flex items-center justify-between mb-3 flex-shrink-0 pt-1">
         <h3 className="font-semibold text-sm">{column.title}</h3>
         <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">
           {leads.length}

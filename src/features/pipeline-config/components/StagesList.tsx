@@ -230,6 +230,10 @@ export const StagesList: React.FC<StagesListProps> = ({
                 onStagesChange();
               }}
               onCancel={() => setEditingStage(null)}
+              onDelete={() => {
+                setEditingStage(null);
+                onStagesChange();
+              }}
             />
           )}
         </DialogContent>

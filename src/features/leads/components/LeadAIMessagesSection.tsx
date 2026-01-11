@@ -25,9 +25,9 @@ import {
 import { Separator } from "@/shared/components/ui/separator";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useToast } from "@/shared/hooks/use-toast";
-import type { Campaign, CustomField, Lead } from "@/shared/types/crm";
-import type { AISuggestion } from "../lib/message-utils";
-import { buildMailtoLink, buildWhatsAppLink } from "../lib/message-utils";
+import type { Campaign, CustomField, Lead, AISuggestion } from "@/shared/types/crm";
+import { getFormalityLabel } from "@/features/campaigns/lib/campaign-utils";
+import { buildMailtoLink, buildWhatsAppLink, groupSuggestionsByChannel } from "../lib/message-utils";
 
 interface LeadAIMessagesSectionProps {
   lead: Lead;
@@ -86,21 +86,10 @@ export function LeadAIMessagesSection({
     [activeCampaigns, selectedCampaignId],
   );
 
-  // Agrupar sugestões por canal
-  const suggestionsByChannel = useMemo(() => {
-    const groups: Record<string, AISuggestion[]> = {
-      WhatsApp: [],
-      Email: [],
-    };
-
-    for (const suggestion of suggestions) {
-      if (groups[suggestion.type]) {
-        groups[suggestion.type].push(suggestion);
-      }
-    }
-
-    return groups;
-  }, [suggestions]);
+  const suggestionsByChannel = useMemo(
+    () => groupSuggestionsByChannel(suggestions),
+    [suggestions]
+  );
 
   const toggleChannel = (channel: "whatsapp" | "email") => {
     setLocalSelectedChannels((prev) => {
@@ -155,17 +144,6 @@ export function LeadAIMessagesSection({
     }
   };
 
-  const getFormalityLabel = (level?: number) => {
-    if (!level) return null;
-    const labels: Record<number, string> = {
-      1: "Muito informal",
-      2: "Informal",
-      3: "Neutro",
-      4: "Formal",
-      5: "Muito formal",
-    };
-    return labels[level];
-  };
 
   return (
     <div className="space-y-4 pt-2">

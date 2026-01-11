@@ -10,7 +10,7 @@ import {
   getCurrentWorkspaceAction,
   getWorkspacesAction,
   switchWorkspaceAction,
-} from "../actions/workspaces";
+} from "@/features/workspaces/actions/workspaces";
 
 interface UseWorkspaceReturn {
   currentWorkspace: Workspace | null;

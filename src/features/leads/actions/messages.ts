@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { requireAuth, hasWorkspaceAccess, getCurrentUser } from "@/shared/lib/supabase/utils";
-import { createActivityAction } from "@/features/activities/actions/activities";
+import { createActivity } from "@/features/activities/lib/activity-utils";
 
 export interface LeadMessageSent {
   id: string;
@@ -72,7 +72,7 @@ export async function saveMessageAction(
     }
 
     // Registrar atividade de mensagem enviada
-    await createActivityAction({
+    await createActivity({
       leadId: input.leadId,
       workspaceId: input.workspaceId,
       userId: currentUser?.id,

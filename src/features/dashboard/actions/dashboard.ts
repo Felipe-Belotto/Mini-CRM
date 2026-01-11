@@ -4,7 +4,7 @@ import { getCampaignsAction } from "@/features/campaigns/actions/campaigns";
 import { getCustomFieldsAction } from "@/features/custom-fields/actions/custom-fields";
 import { getLeadsAction, getArchivedLeadsAction } from "@/features/leads/actions/leads";
 import { getWorkspaceMembersAction } from "@/features/workspaces/actions/members";
-import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
+import { getCurrentWorkspace } from "@/shared/lib/workspace-utils";
 import type { Campaign, CustomField, KanbanStage, Lead, User } from "@/shared/types/crm";
 import { getLeadsCountByStage } from "../lib/metrics-utils";
 
@@ -24,7 +24,7 @@ export interface DashboardMetrics {
 export async function getDashboardMetricsAction(): Promise<DashboardMetrics | null> {
   try {
     // Obter workspace atual
-    const currentWorkspace = await getCurrentWorkspaceAction();
+    const currentWorkspace = await getCurrentWorkspace();
 
     if (!currentWorkspace) {
       return null;
@@ -65,7 +65,7 @@ export async function getDashboardMetricsAction(): Promise<DashboardMetrics | nu
  */
 export async function getCurrentWorkspaceLeadsAction(workspaceId?: string): Promise<Lead[]> {
   try {
-    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspace())?.id;
 
     if (!finalWorkspaceId) {
       return [];
@@ -85,7 +85,7 @@ export async function getCurrentWorkspaceCampaignsAction(workspaceId?: string): 
   Campaign[]
 > {
   try {
-    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspace())?.id;
 
     if (!finalWorkspaceId) {
       return [];
@@ -104,7 +104,7 @@ export async function getCurrentWorkspaceCampaignsAction(workspaceId?: string): 
  */
 export async function getCurrentWorkspaceUsersAction(workspaceId?: string): Promise<User[]> {
   try {
-    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspace())?.id;
 
     if (!finalWorkspaceId) {
       return [];
@@ -132,7 +132,7 @@ export async function getCurrentWorkspaceUsersAction(workspaceId?: string): Prom
  */
 export async function getCurrentWorkspaceCustomFieldsAction(workspaceId?: string): Promise<CustomField[]> {
   try {
-    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspace())?.id;
 
     if (!finalWorkspaceId) {
       return [];
@@ -150,7 +150,7 @@ export async function getCurrentWorkspaceCustomFieldsAction(workspaceId?: string
  */
 export async function getCurrentWorkspaceArchivedLeadsAction(workspaceId?: string): Promise<Lead[]> {
   try {
-    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspace())?.id;
 
     if (!finalWorkspaceId) {
       return [];

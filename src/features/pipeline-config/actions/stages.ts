@@ -14,6 +14,7 @@ function mapDbStageToPipelineStage(dbStage: {
   name: string;
   slug: string;
   color: string;
+  color_palette_id?: string | null;
   sort_order: number;
   is_system: boolean;
   is_hidden: boolean;
@@ -26,6 +27,7 @@ function mapDbStageToPipelineStage(dbStage: {
     name: dbStage.name,
     slug: dbStage.slug,
     color: dbStage.color,
+    colorPaletteId: dbStage.color_palette_id || undefined,
     sortOrder: dbStage.sort_order,
     isSystem: dbStage.is_system,
     isHidden: dbStage.is_hidden,
@@ -152,6 +154,35 @@ export async function createStageAction(
 
     const nextSortOrder = (lastStage?.sort_order ?? 0) + 1;
 
+    // Buscar color_palette_id baseado na key da cor
+    let colorPaletteId: string | null = null;
+    if (input.color) {
+      // Primeiro tentar buscar no workspace, depois nas cores padrão
+      const { data: workspacePalette } = await supabase
+        .from("color_palettes")
+        .select("id")
+        .eq("key", input.color)
+        .eq("workspace_id", input.workspaceId)
+        .single();
+      
+      if (workspacePalette) {
+        colorPaletteId = workspacePalette.id;
+      } else {
+        // Se não encontrou no workspace, buscar nas cores padrão
+        const { data: defaultPalette } = await supabase
+          .from("color_palettes")
+          .select("id")
+          .eq("key", input.color)
+          .eq("is_default", true)
+          .is("workspace_id", null)
+          .single();
+        
+        if (defaultPalette) {
+          colorPaletteId = defaultPalette.id;
+        }
+      }
+    }
+
     // Inserir nova etapa
     const { data, error } = await supabase
       .from("pipeline_stages")
@@ -160,6 +191,7 @@ export async function createStageAction(
         name: input.name,
         slug: `custom_${slug}_${Date.now()}`,
         color: input.color,
+        color_palette_id: colorPaletteId,
         sort_order: nextSortOrder,
         is_system: false,
         is_hidden: false,
@@ -219,7 +251,39 @@ export async function updateStageAction(
     // Preparar updates
     const updates: Record<string, unknown> = {};
     if (input.name !== undefined) updates.name = input.name;
-    if (input.color !== undefined) updates.color = input.color;
+    if (input.color !== undefined) {
+      updates.color = input.color;
+      
+      // Buscar color_palette_id baseado na key da cor
+      let colorPaletteId: string | null = null;
+      if (input.color) {
+        // Primeiro tentar buscar no workspace, depois nas cores padrão
+        const { data: workspacePalette } = await supabase
+          .from("color_palettes")
+          .select("id")
+          .eq("key", input.color)
+          .eq("workspace_id", existingStage.workspace_id)
+          .single();
+        
+        if (workspacePalette) {
+          colorPaletteId = workspacePalette.id;
+        } else {
+          // Se não encontrou no workspace, buscar nas cores padrão
+          const { data: defaultPalette } = await supabase
+            .from("color_palettes")
+            .select("id")
+            .eq("key", input.color)
+            .eq("is_default", true)
+            .is("workspace_id", null)
+            .single();
+          
+          if (defaultPalette) {
+            colorPaletteId = defaultPalette.id;
+          }
+        }
+      }
+      updates.color_palette_id = colorPaletteId;
+    }
     if (input.isHidden !== undefined) updates.is_hidden = input.isHidden;
 
     if (Object.keys(updates).length === 0) {

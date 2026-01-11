@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import {
   DndContext,
-  type DragEndEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -13,7 +12,6 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Button } from "@/shared/components/ui/button";
@@ -37,7 +35,8 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useToast } from "@/shared/hooks/use-toast";
-import { deleteCustomFieldAction, reorderCustomFieldsAction } from "../actions/custom-fields";
+import { deleteCustomFieldAction } from "../actions/custom-fields";
+import { useReorderCustomFields } from "../hooks/use-reorder-custom-fields";
 import { CustomFieldForm } from "./CustomFieldForm";
 import { SortableCustomFieldCard } from "./SortableCustomFieldCard";
 import type { CustomField } from "@/shared/types/crm";
@@ -54,10 +53,14 @@ export function CustomFieldsManager({
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [fields, setFields] = useState<CustomField[]>(initialFields);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomField | null>(null);
   const [deletingField, setDeletingField] = useState<CustomField | null>(null);
+
+  const { fields, setFields, handleDragEnd, isPending: isReordering } = useReorderCustomFields({
+    initialFields,
+    workspaceId,
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -69,37 +72,6 @@ export function CustomFieldsManager({
 
   const handleEdit = (field: CustomField) => {
     setEditingField(field);
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = fields.findIndex((f) => f.id === active.id);
-    const newIndex = fields.findIndex((f) => f.id === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    // Atualização otimista
-    const newFields = arrayMove(fields, oldIndex, newIndex);
-    setFields(newFields);
-
-    // Salvar nova ordem no servidor
-    startTransition(async () => {
-      const orderedIds = newFields.map((f) => f.id);
-      const result = await reorderCustomFieldsAction(workspaceId, orderedIds);
-
-      if (!result.success) {
-        // Reverter se falhou
-        setFields(fields);
-        toast({
-          title: "Erro ao reordenar",
-          description: result.error || "Não foi possível salvar a nova ordem",
-          variant: "destructive",
-        });
-      }
-    });
   };
 
   const handleDelete = async () => {

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { requireAuth, hasWorkspaceAccess, getCurrentUser } from "@/shared/lib/supabase/utils";
 import { validateLeadForStage } from "@/shared/lib/lead-utils";
-import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
-import { createActivityAction } from "@/features/activities/actions/activities";
+import { getCurrentWorkspace } from "@/shared/lib/workspace-utils";
+import { createActivity } from "@/features/activities/lib/activity-utils";
 import { KANBAN_COLUMNS } from "@/shared/types/crm";
 import type {
   KanbanStage,
@@ -68,7 +68,7 @@ async function triggerAutoMessageGeneration(
 export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> {
   try {
     await requireAuth();
-    const currentWorkspace = await getCurrentWorkspaceAction();
+    const currentWorkspace = await getCurrentWorkspace();
     
     if (!currentWorkspace) {
       return {
@@ -143,12 +143,10 @@ export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> 
       };
     }
 
-    // Registrar atividades de mudança de etapa para cada lead promovido
     const currentUser = await getCurrentUser();
-    const { createActivityAction } = await import("@/features/activities/actions/activities");
     
     for (const leadId of eligibleLeadIds) {
-      await createActivityAction({
+      await createActivity({
         leadId,
         workspaceId,
         userId: currentUser?.id,
@@ -285,7 +283,7 @@ export async function createLeadAction(
 
     // Registrar atividade de criação
     const currentUser = await getCurrentUser();
-    await createActivityAction({
+    await createActivity({
       leadId: dbLead.id,
       workspaceId: lead.workspaceId,
       userId: currentUser?.id,
@@ -426,9 +424,8 @@ export async function updateLeadAction(
         throw new Error(error.message || "Não foi possível atualizar o lead");
       }
 
-      // Registrar atividades para cada campo alterado
       for (const change of fieldChanges) {
-        await createActivityAction({
+        await createActivity({
           leadId: id,
           workspaceId: existingLead.workspace_id,
           userId: currentUser?.id,
@@ -465,10 +462,9 @@ export async function updateLeadAction(
         }
       }
 
-      // Registrar atividade de alteração de responsáveis
       const oldResponsibles = existingLead.lead_responsibles?.map((r: { user_id: string }) => r.user_id) || [];
       if (JSON.stringify(oldResponsibles.sort()) !== JSON.stringify([...updates.responsibleIds].sort())) {
-        await createActivityAction({
+        await createActivity({
           leadId: id,
           workspaceId: existingLead.workspace_id,
           userId: currentUser?.id,
@@ -544,12 +540,11 @@ export async function moveLeadAction(
       throw new Error(error.message || "Não foi possível mover o lead");
     }
 
-    // Registrar atividade de mudança de etapa
     const currentUser = await getCurrentUser();
     const oldStageName = KANBAN_COLUMNS.find(c => c.id === oldStage)?.title || oldStage;
     const newStageName = KANBAN_COLUMNS.find(c => c.id === newStage)?.title || newStage;
     
-    await createActivityAction({
+    await createActivity({
       leadId,
       workspaceId: dbLead.workspace_id,
       userId: currentUser?.id,
@@ -716,7 +711,7 @@ export async function archiveLeadAction(leadId: string): Promise<void> {
 
     // Registrar atividade de arquivamento
     const currentUser = await getCurrentUser();
-    await createActivityAction({
+    await createActivity({
       leadId,
       workspaceId: existingLead.workspace_id,
       userId: currentUser?.id,
@@ -765,7 +760,7 @@ export async function restoreLeadAction(leadId: string): Promise<void> {
 
     // Registrar atividade de restauração
     const currentUser = await getCurrentUser();
-    await createActivityAction({
+    await createActivity({
       leadId,
       workspaceId: existingLead.workspace_id,
       userId: currentUser?.id,

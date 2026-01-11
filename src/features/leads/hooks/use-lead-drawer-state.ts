@@ -2,8 +2,8 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { useAuth } from "@/features/auth/hooks/use-auth";
-import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { useAuth } from "@/shared/hooks/use-auth";
+import { useWorkspace } from "@/shared/hooks/use-workspace";
 import { useToast } from "@/shared/hooks/use-toast";
 import type {
   Campaign,
@@ -11,6 +11,7 @@ import type {
   KanbanStage,
   Lead,
   ValidationError,
+  AISuggestion,
 } from "@/shared/types/crm";
 import {
   archiveLeadAction,
@@ -25,7 +26,6 @@ import { uploadLeadAvatarAction } from "../actions/upload-avatar";
 import { getLeadActivitiesAction } from "@/features/activities/actions/activities";
 import type { LeadActivity } from "@/features/activities/types";
 import { getLeadAISuggestionsAction, markAISuggestionsAsViewedAction } from "@/features/ai-messages/actions/ai-messages";
-import type { AISuggestion } from "../lib/message-utils";
 import { useLeadDrawer } from "./use-lead-drawer";
 
 interface UseLeadDrawerStateProps {

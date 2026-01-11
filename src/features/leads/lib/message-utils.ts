@@ -1,9 +1,18 @@
-import type { Lead } from "@/shared/types/crm";
+import type { Lead, AISuggestion } from "@/shared/types/crm";
 
-export interface AISuggestion {
-  id: string;
-  type: "WhatsApp" | "Email";
-  message: string;
+export function groupSuggestionsByChannel(suggestions: AISuggestion[]): Record<string, AISuggestion[]> {
+  const groups: Record<string, AISuggestion[]> = {
+    WhatsApp: [],
+    Email: [],
+  };
+
+  for (const suggestion of suggestions) {
+    if (groups[suggestion.type]) {
+      groups[suggestion.type].push(suggestion);
+    }
+  }
+
+  return groups;
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useWorkspace } from "../hooks/use-workspace";
+import { useWorkspace } from "@/shared/hooks/use-workspace";
 
 /**
  * Componente que garante que o usuário tenha um workspace no dashboard

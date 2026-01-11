@@ -1,14 +1,13 @@
 "use server";
 
-import type { Campaign, Lead, CustomField } from "@/shared/types/crm";
+import type { Campaign, Lead, CustomField, AISuggestion } from "@/shared/types/crm";
 import {
   prepareLeadDataForAI,
   prepareCampaignDataForAI,
   type MessageChannel,
 } from "../lib/prompt-builder";
-import type { AISuggestion } from "@/features/leads/lib/message-utils";
 import { getCurrentUser } from "@/shared/lib/supabase/utils";
-import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
+import { getCurrentWorkspace } from "@/shared/lib/workspace-utils";
 
 export interface GenerateMessagesInput {
   campaign: Campaign;
@@ -37,7 +36,7 @@ export async function generateMessagesAction(
     // Buscar dados do usuário e workspace
     const [user, workspace] = await Promise.all([
       getCurrentUser(),
-      getCurrentWorkspaceAction(),
+      getCurrentWorkspace(),
     ]);
 
     // Preparar dados para a Edge Function
@@ -142,11 +141,11 @@ export async function generateAutoMessagesForLeadAction(
     const { getLeadsAction } = await import("@/features/leads/actions/leads");
     const { getCampaignByIdAction } = await import("@/features/campaigns/actions/campaigns");
     const { getCustomFieldsAction } = await import("@/features/custom-fields/actions/custom-fields");
-    const { getCurrentWorkspaceAction } = await import("@/features/workspaces/actions/workspaces");
+    const { getCurrentWorkspace } = await import("@/shared/lib/workspace-utils");
     const { requireAuth, hasWorkspaceAccess } = await import("@/shared/lib/supabase/utils");
     
     await requireAuth();
-    const workspace = await getCurrentWorkspaceAction();
+    const workspace = await getCurrentWorkspace();
     
     if (!workspace) {
       return { success: false, error: "Workspace não encontrado" };

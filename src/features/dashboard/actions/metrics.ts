@@ -2,7 +2,7 @@
 
 import { createClient } from "@/shared/lib/supabase/server";
 import { requireAuth, hasWorkspaceAccess } from "@/shared/lib/supabase/utils";
-import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
+import { getCurrentWorkspace } from "@/shared/lib/workspace-utils";
 import { KANBAN_COLUMNS } from "@/shared/types/crm";
 
 // Tipos para métricas avançadas
@@ -58,7 +58,7 @@ export async function getConversionRatesAction(workspaceId?: string): Promise<Co
     if (workspaceId) {
       finalWorkspaceId = workspaceId;
     } else {
-      const currentWorkspace = await getCurrentWorkspaceAction();
+      const currentWorkspace = await getCurrentWorkspace();
       if (!currentWorkspace) return [];
       
       await requireAuth();
@@ -159,7 +159,7 @@ export async function getLeadsByPeriodAction(
     if (workspaceId) {
       finalWorkspaceId = workspaceId;
     } else {
-      const currentWorkspace = await getCurrentWorkspaceAction();
+      const currentWorkspace = await getCurrentWorkspace();
       if (!currentWorkspace) return [];
       
       await requireAuth();
@@ -232,7 +232,7 @@ export async function getAverageTimeByStageAction(workspaceId?: string): Promise
     if (workspaceId) {
       finalWorkspaceId = workspaceId;
     } else {
-      const currentWorkspace = await getCurrentWorkspaceAction();
+      const currentWorkspace = await getCurrentWorkspace();
       if (!currentWorkspace) return [];
       
       await requireAuth();
@@ -336,7 +336,7 @@ export async function getPerformanceByUserAction(workspaceId?: string): Promise<
     if (workspaceId) {
       finalWorkspaceId = workspaceId;
     } else {
-      const currentWorkspace = await getCurrentWorkspaceAction();
+      const currentWorkspace = await getCurrentWorkspace();
       if (!currentWorkspace) return [];
       
       await requireAuth();
@@ -397,36 +397,46 @@ export async function getPerformanceByUserAction(workspaceId?: string): Promise<
     for (const userId of userIds) {
       const profile = profileMap.get(userId);
 
-      // Contar leads onde é responsável
-      const { count: leadsCount } = await supabase
-        .from("lead_responsibles")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId);
-
-      // Contar leads qualificados/reunião onde é responsável
-      const { data: qualifiedLeads } = await supabase
+      // Buscar lead_ids onde o usuário é responsável
+      const { data: responsibleLeads } = await supabase
         .from("lead_responsibles")
         .select("lead_id")
         .eq("user_id", userId);
 
+      let leadsCount = 0;
       let qualifiedCount = 0;
-      if (qualifiedLeads && qualifiedLeads.length > 0) {
-        const leadIds = qualifiedLeads.map((l) => l.lead_id);
+
+      if (responsibleLeads && responsibleLeads.length > 0) {
+        const leadIds = responsibleLeads.map((l) => l.lead_id);
+
+        // Contar leads onde é responsável - FILTRAR POR WORKSPACE
         const { count } = await supabase
           .from("leads")
           .select("*", { count: "exact", head: true })
           .in("id", leadIds)
+          .eq("workspace_id", finalWorkspaceId);
+        
+        leadsCount = count || 0;
+
+        // Contar leads qualificados/reunião onde é responsável - FILTRAR POR WORKSPACE
+        const { count: qualified } = await supabase
+          .from("leads")
+          .select("*", { count: "exact", head: true })
+          .in("id", leadIds)
+          .eq("workspace_id", finalWorkspaceId)
           .in("stage", ["qualificado", "reuniao_agendada"]);
-        qualifiedCount = count || 0;
+        
+        qualifiedCount = qualified || 0;
       }
 
-      // Contar mensagens enviadas (pode falhar se tabela não existir)
+      // Contar mensagens enviadas - FILTRAR POR WORKSPACE (tabela já tem workspace_id)
       let messagesCount = 0;
       try {
         const { count } = await supabase
           .from("lead_messages_sent")
           .select("*", { count: "exact", head: true })
-          .eq("user_id", userId);
+          .eq("user_id", userId)
+          .eq("workspace_id", finalWorkspaceId);
         messagesCount = count || 0;
       } catch {
         // Tabela pode não existir ainda
@@ -436,7 +446,7 @@ export async function getPerformanceByUserAction(workspaceId?: string): Promise<
         userId,
         userName: profile?.full_name || "Usuário",
         avatarUrl: profile?.avatar_url || undefined,
-        leadsCount: leadsCount || 0,
+        leadsCount,
         qualifiedCount,
         messagesCount,
       });

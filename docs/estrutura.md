@@ -207,9 +207,91 @@ export async function actionNameAction(
 - Componentes devem ser testáveis com mocks das actions
 
 ### 5. Performance
+
+#### Carregamento Paralelo de Dados
+- **Use `Promise.all` para requisições independentes**: Quando você precisa buscar múltiplos dados que não dependem uns dos outros, use `Promise.all` para executá-los em paralelo, reduzindo significativamente o tempo total de carregamento.
+
+```typescript
+// ✅ BOM: Carregamento paralelo
+const [messages, activities, suggestions] = await Promise.all([
+  getLeadMessagesAction(leadId),
+  getLeadActivitiesAction(leadId),
+  getLeadAISuggestionsAction(leadId),
+]);
+
+// ❌ RUIM: Carregamento sequencial (mais lento)
+const messages = await getLeadMessagesAction(leadId);
+const activities = await getLeadActivitiesAction(leadId);
+const suggestions = await getLeadAISuggestionsAction(leadId);
+```
+
+#### Tratamento de Erros em Promise.all
+- Sempre trate erros individualmente em cada promise para evitar que uma falha quebre todo o carregamento:
+
+```typescript
+// ✅ BOM: Tratamento de erro individual
+Promise.all([
+  getData1().catch((error) => {
+    console.error("Error loading data1:", error);
+    return defaultValue1; // Retorna valor padrão
+  }),
+  getData2().catch((error) => {
+    console.error("Error loading data2:", error);
+    return defaultValue2;
+  }),
+]).then(([data1, data2]) => {
+  // Processa dados mesmo se algum falhou
+});
+
+// ❌ RUIM: Se uma promise falhar, Promise.all falha completamente
+Promise.all([getData1(), getData2()]).then(...);
+```
+
+#### Uso de startTransition para Carregamento Não Bloqueante
+- Use `useTransition` e `startTransition` para tornar atualizações de estado não bloqueantes, mantendo a UI responsiva durante carregamentos:
+
+```typescript
+import { useTransition } from 'react';
+
+function MyComponent() {
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    startTransition(() => {
+      // Carregamento de dados em background
+      Promise.all([...]).then((results) => {
+        startTransition(() => {
+          // Atualizações de estado não bloqueiam UI
+          setData(results);
+        });
+      });
+    });
+  }, []);
+}
+```
+
+#### Preloading de Dados
+- Inicie o carregamento de dados antes de realmente precisar deles para melhorar a percepção de velocidade:
+
+```typescript
+// Preload quando o usuário está prestes a abrir um drawer/modal
+const handleOpenDrawer = (lead: Lead) => {
+  setSelectedLead(lead);
+  setIsOpen(true);
+  
+  // Preload em paralelo antes do drawer abrir completamente
+  void Promise.all([
+    getLeadMessagesAction(lead.id).catch(() => []),
+    getLeadActivitiesAction(lead.id).catch(() => []),
+  ]);
+};
+```
+
+#### Otimizações Gerais
 - Lazy load de componentes pesados quando apropriado
 - Server Actions devem ser eficientes (evite operações custosas desnecessárias)
 - Use cache quando apropriado
+- Centralize autenticação e verificações de workspace para evitar chamadas redundantes
 
 ## Exemplo de Fluxo
 

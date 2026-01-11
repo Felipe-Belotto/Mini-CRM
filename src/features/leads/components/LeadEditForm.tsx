@@ -16,7 +16,7 @@ import { EditableField } from "./EditableField";
 import { CustomFieldInput } from "@/features/custom-fields/components/CustomFieldInput";
 import type { CustomField } from "@/shared/types/crm";
 import { uploadLeadAvatarAction } from "../actions/upload-avatar";
-import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { useWorkspace } from "@/shared/hooks/use-workspace";
 
 interface LeadEditFormProps {
   lead: Lead;

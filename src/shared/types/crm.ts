@@ -76,6 +76,12 @@ export const LEAD_ORIGINS = [
 
 export type LeadOrigin = (typeof LEAD_ORIGINS)[number]["id"];
 
+export interface AISuggestion {
+  id: string;
+  type: "WhatsApp" | "Email";
+  message: string;
+}
+
 // Campaign - derivado de CampaignRow
 export interface Campaign {
   id: string;
@@ -172,9 +178,24 @@ export interface PipelineStage {
   name: string;
   slug: string;
   color: string;
+  colorPaletteId?: string;
   sortOrder: number;
   isSystem: boolean;
   isHidden: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ColorPalette - paleta de cores para personalização
+export interface ColorPalette {
+  id: string;
+  name: string;
+  key: string;
+  borderClass: string;
+  bgClass: string;
+  previewClass: string;
+  isDefault: boolean;
+  workspaceId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

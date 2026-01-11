@@ -10,7 +10,7 @@ import {
   getCurrentUserAction,
   type LoginInput,
   type SignupInput,
-} from "../actions/auth";
+} from "@/features/auth/actions/auth";
 import { useToast } from "@/shared/hooks/use-toast";
 
 interface UseAuthReturn {

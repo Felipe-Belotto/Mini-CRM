@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import type React from "react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useToast } from "@/shared/hooks/use-toast";
 import type {
   KanbanColumn,
@@ -22,6 +22,7 @@ import type {
 } from "@/shared/types/crm";
 import { KANBAN_COLUMNS } from "@/shared/types/crm";
 import { getLeadsByStage } from "../lib/lead-utils";
+import { useKanbanColors } from "./use-kanban-colors";
 
 interface UseKanbanBoardProps {
   leads: Lead[];
@@ -52,15 +53,22 @@ interface UseKanbanBoardReturn {
   handleDragEnd: (event: DragEndEvent) => Promise<void>;
 }
 
-function stagesToColumns(stages: PipelineStage[]): KanbanColumn[] {
+function stagesToColumns(
+  stages: PipelineStage[],
+  getPaletteByKey: (key: string) => { borderClass: string } | undefined
+): KanbanColumn[] {
   return stages
     .filter((s) => !s.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((s) => ({
-      id: s.slug as KanbanStage,
-      title: s.name,
-      color: s.color,
-    }));
+    .map((s) => {
+      const palette = getPaletteByKey(s.color);
+      // Se encontrou a paleta, usa borderClass diretamente, senão mantém a key para fallback
+      return {
+        id: s.slug as KanbanStage,
+        title: s.name,
+        color: palette?.borderClass || s.color,
+      };
+    });
 }
 
 export function useKanbanBoard({
@@ -78,8 +86,20 @@ export function useKanbanBoard({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const columns: KanbanColumn[] =
-    stages && stages.length > 0 ? stagesToColumns(stages) : KANBAN_COLUMNS;
+  const { getPaletteByKey, isLoading: isLoadingColors } = useKanbanColors({ stages });
+
+  const columns: KanbanColumn[] = useMemo(() => {
+    if (!stages || stages.length === 0) {
+      return KANBAN_COLUMNS;
+    }
+    
+    // Se ainda está carregando as cores, usa fallback
+    if (isLoadingColors) {
+      return stagesToColumns(stages, () => undefined);
+    }
+    
+    return stagesToColumns(stages, getPaletteByKey);
+  }, [stages, getPaletteByKey, isLoadingColors]);
 
   useEffect(() => {
     setOptimisticLeads(leads);

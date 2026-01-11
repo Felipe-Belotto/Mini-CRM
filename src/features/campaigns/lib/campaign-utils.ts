@@ -8,12 +8,9 @@ export interface CampaignFormData {
   aiInstructions: string;
   status: "active" | "paused" | "finished";
   triggerStage?: KanbanStage;
-  formalityLevel?: number; // 1-5, onde 1=muito informal, 5=muito formal
+  formalityLevel?: number;
 }
 
-/**
- * Labels para níveis de formalidade
- */
 export const FORMALITY_LEVEL_LABELS: Record<number, string> = {
   1: "Muito informal",
   2: "Informal",
@@ -22,27 +19,18 @@ export const FORMALITY_LEVEL_LABELS: Record<number, string> = {
   5: "Muito formal",
 };
 
-/**
- * Mapeamento de cores para status de campanha
- */
 export const CAMPAIGN_STATUS_COLORS = {
   active: "bg-success/10 text-success border-success/20",
   paused: "bg-warning/10 text-warning border-warning/20",
   finished: "bg-muted text-muted-foreground border-muted",
 } as const;
 
-/**
- * Obtém a classe CSS para o status de uma campanha
- */
 export function getCampaignStatusColorClass(
   status: Campaign["status"],
 ): string {
   return cn("status-badge", CAMPAIGN_STATUS_COLORS[status]);
 }
 
-/**
- * Valida os dados do formulário de campanha
- */
 export function validateCampaignForm(formData: CampaignFormData): {
   isValid: boolean;
   errors: string[];
@@ -63,12 +51,14 @@ export function validateCampaignForm(formData: CampaignFormData): {
   };
 }
 
-/**
- * Filtra campanhas por status
- */
 export function getCampaignsByStatus(
   campaigns: Campaign[],
   status: Campaign["status"],
 ): Campaign[] {
   return campaigns.filter((campaign) => campaign.status === status);
+}
+
+export function getFormalityLabel(level: number | undefined): string | null {
+  if (!level) return null;
+  return FORMALITY_LEVEL_LABELS[level] || null;
 }
