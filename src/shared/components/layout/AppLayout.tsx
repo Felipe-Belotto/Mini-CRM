@@ -15,6 +15,7 @@ interface AppLayoutProps {
   children: React.ReactNode;
   currentWorkspace: Workspace;
   workspaces: Workspace[];
+  userRole?: "owner" | "admin" | "member" | null;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
@@ -22,6 +23,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
   currentWorkspace,
   workspaces,
+  userRole,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -55,6 +57,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         user={user}
         currentWorkspace={currentWorkspace}
         workspaces={workspaces}
+        userRole={userRole}
         onLogout={handleLogout}
       />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">

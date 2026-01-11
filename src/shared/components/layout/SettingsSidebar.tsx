@@ -9,22 +9,26 @@ import {
   Building2,
   FolderTree,
   FileText,
+  History,
   ArrowLeft,
 } from "lucide-react";
 
 const settingsNavItems = [
-  { icon: User, label: "Perfil", path: "/configuracoes/perfil" },
-  { icon: Building2, label: "Workspace", path: "/configuracoes/workspace" },
-  { icon: FolderTree, label: "Funil", path: "/configuracoes/funil" },
-  { icon: FileText, label: "Campos", path: "/configuracoes/campos" },
+  { icon: User, label: "Perfil", path: "/configuracoes/perfil", adminOnly: false },
+  { icon: Building2, label: "Workspace", path: "/configuracoes/workspace", adminOnly: false },
+  { icon: FolderTree, label: "Funil", path: "/configuracoes/funil", adminOnly: false },
+  { icon: FileText, label: "Campos", path: "/configuracoes/campos", adminOnly: false },
+  { icon: History, label: "Histórico", path: "/configuracoes/historico", adminOnly: true },
 ];
 
 interface SettingsSidebarProps {
   onBack?: () => void;
+  userRole?: "owner" | "admin" | "member" | null;
 }
 
 export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   onBack,
+  userRole,
 }) => {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -32,6 +36,14 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Verifica se o usuário é admin ou owner
+  const isAdminOrOwner = userRole === "owner" || userRole === "admin";
+
+  // Filtrar itens com base nas permissões
+  const visibleItems = settingsNavItems.filter(
+    (item) => !item.adminOnly || isAdminOrOwner
+  );
 
   return (
     <nav className="flex-1 p-3 space-y-1">
@@ -44,18 +56,10 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           <span>Voltar</span>
         </button>
       )}
-      {settingsNavItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive =
           mounted &&
-          (pathname === item.path ||
-            (item.path === "/configuracoes/perfil" &&
-              pathname?.startsWith("/configuracoes/perfil")) ||
-            (item.path === "/configuracoes/workspace" &&
-              pathname?.startsWith("/configuracoes/workspace")) ||
-            (item.path === "/configuracoes/funil" &&
-              pathname?.startsWith("/configuracoes/funil")) ||
-            (item.path === "/configuracoes/campos" &&
-              pathname?.startsWith("/configuracoes/campos")));
+          (pathname === item.path || pathname?.startsWith(item.path));
 
         return (
           <Link

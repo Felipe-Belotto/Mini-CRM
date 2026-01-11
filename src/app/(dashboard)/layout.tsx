@@ -7,7 +7,7 @@ import {
 } from "@/features/workspaces/actions/workspaces";
 import { AppLayout } from "@/shared/components/layout/AppLayout";
 import { isOnboardingComplete } from "@/shared/lib/supabase/onboarding";
-import { getCurrentUser } from "@/shared/lib/supabase/utils";
+import { getCurrentUser, getWorkspaceRole } from "@/shared/lib/supabase/utils";
 
 export default async function DashboardLayout({
   children,
@@ -42,11 +42,15 @@ export default async function DashboardLayout({
     redirect("/onboarding/workspace");
   }
 
+  // Obter o role do usuário no workspace atual
+  const userRole = await getWorkspaceRole(currentWorkspace.id, user.id);
+
   return (
     <AppLayout
       user={user}
       currentWorkspace={currentWorkspace}
       workspaces={workspaces}
+      userRole={userRole}
     >
       {children}
     </AppLayout>

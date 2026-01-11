@@ -2,6 +2,7 @@
 
 import {
   Archive,
+  Clock,
   FileText,
   List,
   Mail,
@@ -50,6 +51,7 @@ import {
   restoreLeadAction,
 } from "../actions/leads";
 import { uploadLeadAvatarAction } from "../actions/upload-avatar";
+import { ActivityTimeline } from "@/features/activities/components/ActivityTimeline";
 import { useLeadDrawer } from "../hooks/use-lead-drawer";
 import { getInitials } from "../lib/avatar-utils";
 import { LeadDetailsTab } from "./LeadDetailsTab";
@@ -325,6 +327,13 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Mensagens
               </TabsTrigger>
+              <TabsTrigger
+                value="history"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                Histórico
+              </TabsTrigger>
             </TabsList>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -395,6 +404,10 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
 
               <TabsContent value="messages" className="mt-0">
                 <LeadMessagesTab lead={lead} />
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-0">
+                <ActivityTimeline leadId={lead.id} />
               </TabsContent>
             </div>
           </ScrollArea>

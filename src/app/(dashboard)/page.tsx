@@ -1,5 +1,11 @@
 import { redirect } from "next/navigation";
 import { getDashboardMetricsAction } from "@/features/dashboard/actions/dashboard";
+import {
+  getConversionRatesAction,
+  getLeadsByPeriodAction,
+  getAverageTimeByStageAction,
+  getPerformanceByUserAction,
+} from "@/features/dashboard/actions/metrics";
 import { DashboardUI } from "@/features/dashboard/components/DashboardUI";
 
 export default async function DashboardPage() {
@@ -9,5 +15,25 @@ export default async function DashboardPage() {
     redirect("/onboarding/workspace");
   }
 
-  return <DashboardUI leads={metrics.leads} campaigns={metrics.campaigns} />;
+  // Buscar métricas avançadas em paralelo
+  const [conversionRates, leadsByPeriod, timeByStage, performanceByUser] =
+    await Promise.all([
+      getConversionRatesAction(),
+      getLeadsByPeriodAction("day", 30),
+      getAverageTimeByStageAction(),
+      getPerformanceByUserAction(),
+    ]);
+
+  return (
+    <DashboardUI
+      leads={metrics.leads}
+      campaigns={metrics.campaigns}
+      advancedMetrics={{
+        conversionRates,
+        leadsByPeriod,
+        timeByStage,
+        performanceByUser,
+      }}
+    />
+  );
 }

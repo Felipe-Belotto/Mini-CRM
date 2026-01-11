@@ -137,6 +137,7 @@ export interface KanbanColumn {
   color: string;
 }
 
+// Etapas padrão do sistema (fallback quando não há etapas dinâmicas)
 export const KANBAN_COLUMNS: KanbanColumn[] = [
   { id: "base", title: "Base", color: "kanban-base" },
   { id: "lead_mapeado", title: "Lead Mapeado", color: "kanban-mapped" },
@@ -162,6 +163,20 @@ export const KANBAN_COLUMNS: KanbanColumn[] = [
     color: "kanban-meeting",
   },
 ];
+
+// PipelineStage - etapa dinâmica do pipeline (do banco de dados)
+export interface PipelineStage {
+  id: string;
+  workspaceId: string;
+  name: string;
+  slug: string;
+  color: string;
+  sortOrder: number;
+  isSystem: boolean;
+  isHidden: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface ValidationError {
   field: string;

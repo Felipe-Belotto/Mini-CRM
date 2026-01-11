@@ -22,6 +22,7 @@ interface AppSidebarProps {
   user: User;
   currentWorkspace: Workspace;
   workspaces: Workspace[];
+  userRole?: "owner" | "admin" | "member" | null;
   onLogout: () => void;
 }
 
@@ -29,6 +30,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   user,
   currentWorkspace,
   workspaces,
+  userRole,
   onLogout,
 }) => {
   const pathname = usePathname();
@@ -60,7 +62,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               Configurações
             </h2>
           </div>
-          <SettingsSidebar onBack={handleBackFromSettings} />
+          <SettingsSidebar onBack={handleBackFromSettings} userRole={userRole} />
         </div>
       ) : (
         <>

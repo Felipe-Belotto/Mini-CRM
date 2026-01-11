@@ -190,8 +190,7 @@ body {
   background-color: color-mix(in oklch, var(--muted) 50%, transparent);
   border-radius: 0.75rem;
   padding: 0.75rem;
-  height: calc(100vh - 200px);
-  width: 18rem;
+  width: 20rem;
   flex-shrink: 0;
 }
 

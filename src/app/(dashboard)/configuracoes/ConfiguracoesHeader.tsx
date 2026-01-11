@@ -13,6 +13,10 @@ const pageConfig = {
     title: "Campos Personalizados",
     description: "Crie e gerencie campos adicionais para leads",
   },
+  "/configuracoes/historico": {
+    title: "Histórico de Atividades",
+    description: null,
+  },
 };
 
 export function ConfiguracoesHeader() {
@@ -26,7 +30,9 @@ export function ConfiguracoesHeader() {
   return (
     <div className="mb-6">
       <h1 className="text-2xl font-bold">{config.title}</h1>
-      <p className="text-muted-foreground">{config.description}</p>
+      {config.description && (
+        <p className="text-muted-foreground">{config.description}</p>
+      )}
     </div>
   );
 }

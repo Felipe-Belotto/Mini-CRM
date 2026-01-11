@@ -42,7 +42,7 @@ export const KanbanColumnComponent: React.FC<KanbanColumnProps> = ({
     <div
       ref={setNodeRef}
       className={cn(
-        "kanban-column border-t-4 transition-all duration-200 flex flex-col h-full",
+        "kanban-column border-t-4 transition-all duration-200 flex flex-col h-full overflow-hidden",
         getKanbanColorClass(column.color),
         isOver && "bg-accent/10 ring-2 ring-accent/30",
       )}
@@ -66,12 +66,12 @@ export const KanbanColumnComponent: React.FC<KanbanColumnProps> = ({
         </Button>
       )}
 
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="flex-1 min-h-0 -mr-3">
         <SortableContext
           items={leads.map((l) => l.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-2">
+          <div className="space-y-2 pr-3">
             {leads.map((lead) => (
               <LeadCard
                 key={lead.id}

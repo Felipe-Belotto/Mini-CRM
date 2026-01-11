@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
-import { requireAuth, hasWorkspaceAccess } from "@/shared/lib/supabase/utils";
+import { requireAuth, hasWorkspaceAccess, getCurrentUser } from "@/shared/lib/supabase/utils";
 import { validateLeadForStage } from "@/shared/lib/lead-utils";
 import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
+import { createActivityAction } from "@/features/activities/actions/activities";
+import { KANBAN_COLUMNS } from "@/shared/types/crm";
 import type {
   KanbanStage,
   Lead,
@@ -218,6 +220,19 @@ export async function createLeadAction(
       }
     }
 
+    // Registrar atividade de criação
+    const currentUser = await getCurrentUser();
+    await createActivityAction({
+      leadId: dbLead.id,
+      workspaceId: lead.workspaceId,
+      userId: currentUser?.id,
+      actionType: "created",
+      metadata: {
+        leadName: lead.name,
+        stage: lead.stage,
+      },
+    });
+
     revalidatePath("/pipeline");
 
     return {
@@ -238,11 +253,11 @@ export async function updateLeadAction(
   updates: Partial<Lead>,
 ): Promise<void> {
   try {
-    // Buscar lead para verificar workspace
+    // Buscar lead atual completo para comparação
     const supabase = await createClient();
     const { data: existingLead, error: fetchError } = await supabase
       .from("leads")
-      .select("workspace_id")
+      .select("*, lead_responsibles(user_id)")
       .eq("id", id)
       .single();
 
@@ -258,28 +273,80 @@ export async function updateLeadAction(
       throw new Error("Você não tem acesso a este workspace");
     }
 
-    // Preparar updates para o banco
-    const dbUpdates: Record<string, unknown> = {};
+    const currentUser = await getCurrentUser();
 
-    if (updates.name !== undefined) dbUpdates.name = updates.name;
-    if (updates.email !== undefined) dbUpdates.email = updates.email;
-    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
-    if (updates.position !== undefined) dbUpdates.position = updates.position;
-    if (updates.company !== undefined) dbUpdates.company = updates.company;
-    if (updates.origin !== undefined)
+    // Preparar updates para o banco e rastrear alterações
+    const dbUpdates: Record<string, unknown> = {};
+    const fieldChanges: Array<{ field: string; oldValue: unknown; newValue: unknown; label: string }> = [];
+
+    const fieldLabels: Record<string, string> = {
+      name: "Nome",
+      email: "E-mail",
+      phone: "Telefone",
+      position: "Cargo",
+      company: "Empresa",
+      origin: "Origem",
+      segment: "Segmento",
+      revenue: "Faturamento",
+      linkedIn: "LinkedIn",
+      notes: "Notas",
+      avatarUrl: "Avatar",
+      stage: "Etapa",
+      campaignId: "Campanha",
+    };
+
+    if (updates.name !== undefined && updates.name !== existingLead.name) {
+      dbUpdates.name = updates.name;
+      fieldChanges.push({ field: "name", oldValue: existingLead.name, newValue: updates.name, label: fieldLabels.name });
+    }
+    if (updates.email !== undefined && updates.email !== existingLead.email) {
+      dbUpdates.email = updates.email;
+      fieldChanges.push({ field: "email", oldValue: existingLead.email, newValue: updates.email, label: fieldLabels.email });
+    }
+    if (updates.phone !== undefined && updates.phone !== existingLead.phone) {
+      dbUpdates.phone = updates.phone;
+      fieldChanges.push({ field: "phone", oldValue: existingLead.phone, newValue: updates.phone, label: fieldLabels.phone });
+    }
+    if (updates.position !== undefined && updates.position !== existingLead.position) {
+      dbUpdates.position = updates.position;
+      fieldChanges.push({ field: "position", oldValue: existingLead.position, newValue: updates.position, label: fieldLabels.position });
+    }
+    if (updates.company !== undefined && updates.company !== existingLead.company) {
+      dbUpdates.company = updates.company;
+      fieldChanges.push({ field: "company", oldValue: existingLead.company, newValue: updates.company, label: fieldLabels.company });
+    }
+    if (updates.origin !== undefined && updates.origin !== existingLead.origin) {
       dbUpdates.origin = updates.origin ?? null;
-    if (updates.segment !== undefined)
+      fieldChanges.push({ field: "origin", oldValue: existingLead.origin, newValue: updates.origin, label: fieldLabels.origin });
+    }
+    if (updates.segment !== undefined && updates.segment !== existingLead.segment) {
       dbUpdates.segment = updates.segment ?? null;
-    if (updates.revenue !== undefined)
+      fieldChanges.push({ field: "segment", oldValue: existingLead.segment, newValue: updates.segment, label: fieldLabels.segment });
+    }
+    if (updates.revenue !== undefined && updates.revenue !== existingLead.revenue) {
       dbUpdates.revenue = updates.revenue ?? null;
-    if (updates.linkedIn !== undefined)
+      fieldChanges.push({ field: "revenue", oldValue: existingLead.revenue, newValue: updates.revenue, label: fieldLabels.revenue });
+    }
+    if (updates.linkedIn !== undefined && updates.linkedIn !== existingLead.linkedin) {
       dbUpdates.linkedin = updates.linkedIn ?? null;
-    if (updates.notes !== undefined) dbUpdates.notes = updates.notes ?? null;
-    if (updates.avatarUrl !== undefined)
+      fieldChanges.push({ field: "linkedIn", oldValue: existingLead.linkedin, newValue: updates.linkedIn, label: fieldLabels.linkedIn });
+    }
+    if (updates.notes !== undefined && updates.notes !== existingLead.notes) {
+      dbUpdates.notes = updates.notes ?? null;
+      fieldChanges.push({ field: "notes", oldValue: existingLead.notes, newValue: updates.notes, label: fieldLabels.notes });
+    }
+    if (updates.avatarUrl !== undefined && updates.avatarUrl !== existingLead.avatar_url) {
       dbUpdates.avatar_url = updates.avatarUrl ?? null;
-    if (updates.stage !== undefined) dbUpdates.stage = updates.stage;
-    if (updates.campaignId !== undefined)
+      fieldChanges.push({ field: "avatarUrl", oldValue: existingLead.avatar_url, newValue: updates.avatarUrl, label: fieldLabels.avatarUrl });
+    }
+    if (updates.stage !== undefined && updates.stage !== existingLead.stage) {
+      dbUpdates.stage = updates.stage;
+      fieldChanges.push({ field: "stage", oldValue: existingLead.stage, newValue: updates.stage, label: fieldLabels.stage });
+    }
+    if (updates.campaignId !== undefined && updates.campaignId !== existingLead.campaign_id) {
       dbUpdates.campaign_id = updates.campaignId ?? null;
+      fieldChanges.push({ field: "campaignId", oldValue: existingLead.campaign_id, newValue: updates.campaignId, label: fieldLabels.campaignId });
+    }
 
     // Atualizar lead no banco (se houver campos para atualizar)
     if (Object.keys(dbUpdates).length > 0) {
@@ -291,6 +358,20 @@ export async function updateLeadAction(
       if (error) {
         console.error("Error updating lead:", error);
         throw new Error(error.message || "Não foi possível atualizar o lead");
+      }
+
+      // Registrar atividades para cada campo alterado
+      for (const change of fieldChanges) {
+        await createActivityAction({
+          leadId: id,
+          workspaceId: existingLead.workspace_id,
+          userId: currentUser?.id,
+          actionType: "field_updated",
+          fieldName: change.field,
+          oldValue: change.oldValue,
+          newValue: change.newValue,
+          metadata: { fieldLabel: change.label },
+        });
       }
     }
 
@@ -316,6 +397,21 @@ export async function updateLeadAction(
         if (responsiblesError) {
           console.error("Error updating lead responsibles:", responsiblesError);
         }
+      }
+
+      // Registrar atividade de alteração de responsáveis
+      const oldResponsibles = existingLead.lead_responsibles?.map((r: { user_id: string }) => r.user_id) || [];
+      if (JSON.stringify(oldResponsibles.sort()) !== JSON.stringify([...updates.responsibleIds].sort())) {
+        await createActivityAction({
+          leadId: id,
+          workspaceId: existingLead.workspace_id,
+          userId: currentUser?.id,
+          actionType: "field_updated",
+          fieldName: "responsibleIds",
+          oldValue: oldResponsibles,
+          newValue: updates.responsibleIds,
+          metadata: { fieldLabel: "Responsáveis" },
+        });
       }
     }
 
@@ -369,6 +465,8 @@ export async function moveLeadAction(
     // Obter o próximo sort_order para a nova coluna se não foi fornecido
     const sortOrder = newSortOrder ?? await getNextSortOrderAction(dbLead.workspace_id, newStage);
 
+    const oldStage = lead.stage;
+
     // Atualizar stage e sort_order do lead
     const { error } = await supabase
       .from("leads")
@@ -379,6 +477,24 @@ export async function moveLeadAction(
       console.error("Error moving lead:", error);
       throw new Error(error.message || "Não foi possível mover o lead");
     }
+
+    // Registrar atividade de mudança de etapa
+    const currentUser = await getCurrentUser();
+    const oldStageName = KANBAN_COLUMNS.find(c => c.id === oldStage)?.title || oldStage;
+    const newStageName = KANBAN_COLUMNS.find(c => c.id === newStage)?.title || newStage;
+    
+    await createActivityAction({
+      leadId,
+      workspaceId: dbLead.workspace_id,
+      userId: currentUser?.id,
+      actionType: "stage_changed",
+      oldValue: oldStage,
+      newValue: newStage,
+      metadata: {
+        oldStageName,
+        newStageName,
+      },
+    });
 
     revalidatePath("/pipeline");
 
@@ -475,7 +591,7 @@ export async function archiveLeadAction(leadId: string): Promise<void> {
     const supabase = await createClient();
     const { data: existingLead, error: fetchError } = await supabase
       .from("leads")
-      .select("workspace_id")
+      .select("workspace_id, name")
       .eq("id", leadId)
       .single();
 
@@ -499,6 +615,16 @@ export async function archiveLeadAction(leadId: string): Promise<void> {
       console.error("Error archiving lead:", error);
       throw new Error(error.message || "Não foi possível arquivar o lead");
     }
+
+    // Registrar atividade de arquivamento
+    const currentUser = await getCurrentUser();
+    await createActivityAction({
+      leadId,
+      workspaceId: existingLead.workspace_id,
+      userId: currentUser?.id,
+      actionType: "archived",
+      metadata: { leadName: existingLead.name },
+    });
     // Não usamos revalidatePath aqui pois o cliente usa optimistic updates
   } catch (error) {
     console.error("Error in archiveLeadAction:", error);
@@ -514,7 +640,7 @@ export async function restoreLeadAction(leadId: string): Promise<void> {
     const supabase = await createClient();
     const { data: existingLead, error: fetchError } = await supabase
       .from("leads")
-      .select("workspace_id")
+      .select("workspace_id, name")
       .eq("id", leadId)
       .single();
 
@@ -538,6 +664,16 @@ export async function restoreLeadAction(leadId: string): Promise<void> {
       console.error("Error restoring lead:", error);
       throw new Error(error.message || "Não foi possível restaurar o lead");
     }
+
+    // Registrar atividade de restauração
+    const currentUser = await getCurrentUser();
+    await createActivityAction({
+      leadId,
+      workspaceId: existingLead.workspace_id,
+      userId: currentUser?.id,
+      actionType: "restored",
+      metadata: { leadName: existingLead.name },
+    });
     // Não usamos revalidatePath aqui pois o cliente usa optimistic updates
   } catch (error) {
     console.error("Error in restoreLeadAction:", error);
