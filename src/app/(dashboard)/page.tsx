@@ -17,13 +17,21 @@ export default async function DashboardPage() {
     redirect("/onboarding/workspace");
   }
 
-  // Buscar métricas avançadas em paralelo
+  // Obter workspaceId uma vez para evitar múltiplas verificações
+  const { getCurrentWorkspaceAction } = await import("@/features/workspaces/actions/workspaces");
+  const currentWorkspace = await getCurrentWorkspaceAction();
+  
+  if (!currentWorkspace) {
+    redirect("/onboarding/workspace");
+  }
+
+  // Buscar métricas avançadas em paralelo, passando workspaceId para evitar verificações redundantes
   const [conversionRates, leadsByPeriod, timeByStage, performanceByUser] =
     await Promise.all([
-      getConversionRatesAction(),
-      getLeadsByPeriodAction("day", 30),
-      getAverageTimeByStageAction(),
-      getPerformanceByUserAction(),
+      getConversionRatesAction(currentWorkspace.id),
+      getLeadsByPeriodAction("day", 30, currentWorkspace.id),
+      getAverageTimeByStageAction(currentWorkspace.id),
+      getPerformanceByUserAction(currentWorkspace.id),
     ]);
 
   return (

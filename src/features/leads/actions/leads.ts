@@ -24,6 +24,45 @@ export interface PromoteLeadsResult {
 }
 
 /**
+ * Função auxiliar para gerar mensagens automaticamente quando um lead atinge uma etapa gatilho
+ * Executa em background sem bloquear a resposta
+ */
+async function triggerAutoMessageGeneration(
+  leadId: string,
+  stage: KanbanStage,
+  workspaceId: string,
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+    
+    // Buscar campanhas ativas com trigger_stage correspondente à etapa
+    const { data: triggerCampaigns, error: campaignsError } = await supabase
+      .from("campaigns")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("status", "active")
+      .eq("trigger_stage", stage);
+
+    // Gerar mensagens automaticamente em background (não bloqueia a resposta)
+    if (!campaignsError && triggerCampaigns && triggerCampaigns.length > 0) {
+      const { generateAutoMessagesForLeadAction } = await import("@/features/ai-messages/actions/ai-messages");
+      
+      // Processar em background sem bloquear
+      Promise.all(
+        triggerCampaigns.map(campaign =>
+          generateAutoMessagesForLeadAction(leadId, campaign.id).catch(err =>
+            console.error(`Error generating auto messages for lead ${leadId} and campaign ${campaign.id}:`, err)
+          )
+        )
+      ).catch(err => console.error("Error in background message generation:", err));
+    }
+  } catch (error) {
+    // Não propagar erro - geração automática não deve bloquear operações principais
+    console.error("Error triggering auto message generation:", error);
+  }
+}
+
+/**
  * Server Action para promover leads elegíveis de "base" para "lead_mapeado"
  */
 export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> {
@@ -102,6 +141,30 @@ export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> 
         eligibleCount: eligibleLeadIds.length,
         error: "Erro ao promover leads",
       };
+    }
+
+    // Registrar atividades de mudança de etapa para cada lead promovido
+    const currentUser = await getCurrentUser();
+    const { createActivityAction } = await import("@/features/activities/actions/activities");
+    
+    for (const leadId of eligibleLeadIds) {
+      await createActivityAction({
+        leadId,
+        workspaceId,
+        userId: currentUser?.id,
+        actionType: "stage_changed",
+        oldValue: "base",
+        newValue: "lead_mapeado",
+        metadata: {
+          oldStageName: "Base",
+          newStageName: "Lead Mapeado",
+        },
+      }).catch(err => console.error("Error creating activity:", err));
+    }
+
+    // Gerar mensagens automaticamente para cada lead promovido (usa função auxiliar)
+    for (const leadId of eligibleLeadIds) {
+      triggerAutoMessageGeneration(leadId, "lead_mapeado", workspaceId);
     }
 
     revalidatePath("/pipeline");
@@ -232,6 +295,9 @@ export async function createLeadAction(
         stage: lead.stage,
       },
     });
+
+    // Gerar mensagens automaticamente se o lead foi criado em uma etapa gatilho
+    triggerAutoMessageGeneration(dbLead.id, lead.stage, lead.workspaceId);
 
     revalidatePath("/pipeline");
 
@@ -495,6 +561,9 @@ export async function moveLeadAction(
         newStageName,
       },
     });
+
+    // Gerar mensagens automaticamente se o lead foi movido para uma etapa gatilho
+    triggerAutoMessageGeneration(leadId, newStage, dbLead.workspace_id);
 
     revalidatePath("/pipeline");
 

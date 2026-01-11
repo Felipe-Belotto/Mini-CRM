@@ -51,14 +51,22 @@ function extractJsonbValue(value: unknown): string | null {
 /**
  * Calcula taxa de conversão entre etapas baseado no histórico de atividades
  */
-export async function getConversionRatesAction(): Promise<ConversionRate[]> {
+export async function getConversionRatesAction(workspaceId?: string): Promise<ConversionRate[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
-    if (!currentWorkspace) return [];
-
-    await requireAuth();
-    const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
-    if (!hasAccess) return [];
+    let finalWorkspaceId: string;
+    
+    if (workspaceId) {
+      finalWorkspaceId = workspaceId;
+    } else {
+      const currentWorkspace = await getCurrentWorkspaceAction();
+      if (!currentWorkspace) return [];
+      
+      await requireAuth();
+      const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
+      if (!hasAccess) return [];
+      
+      finalWorkspaceId = currentWorkspace.id;
+    }
 
     const supabase = await createClient();
 
@@ -66,7 +74,7 @@ export async function getConversionRatesAction(): Promise<ConversionRate[]> {
     const { data: stageChanges, error } = await supabase
       .from("lead_activities")
       .select("old_value, new_value")
-      .eq("workspace_id", currentWorkspace.id)
+      .eq("workspace_id", finalWorkspaceId)
       .eq("action_type", "stage_changed");
 
     if (error) {
@@ -142,15 +150,24 @@ export async function getConversionRatesAction(): Promise<ConversionRate[]> {
  */
 export async function getLeadsByPeriodAction(
   period: "day" | "week" | "month" = "day",
-  days = 30
+  days = 30,
+  workspaceId?: string
 ): Promise<LeadsByPeriod[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
-    if (!currentWorkspace) return [];
-
-    await requireAuth();
-    const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
-    if (!hasAccess) return [];
+    let finalWorkspaceId: string;
+    
+    if (workspaceId) {
+      finalWorkspaceId = workspaceId;
+    } else {
+      const currentWorkspace = await getCurrentWorkspaceAction();
+      if (!currentWorkspace) return [];
+      
+      await requireAuth();
+      const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
+      if (!hasAccess) return [];
+      
+      finalWorkspaceId = currentWorkspace.id;
+    }
 
     const supabase = await createClient();
 
@@ -161,7 +178,7 @@ export async function getLeadsByPeriodAction(
     const { data: leads, error } = await supabase
       .from("leads")
       .select("created_at")
-      .eq("workspace_id", currentWorkspace.id)
+      .eq("workspace_id", finalWorkspaceId)
       .gte("created_at", startDate.toISOString())
       .order("created_at", { ascending: true });
 
@@ -208,14 +225,22 @@ export async function getLeadsByPeriodAction(
 /**
  * Calcula tempo médio em cada etapa (requer histórico de atividades)
  */
-export async function getAverageTimeByStageAction(): Promise<TimeByStage[]> {
+export async function getAverageTimeByStageAction(workspaceId?: string): Promise<TimeByStage[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
-    if (!currentWorkspace) return [];
-
-    await requireAuth();
-    const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
-    if (!hasAccess) return [];
+    let finalWorkspaceId: string;
+    
+    if (workspaceId) {
+      finalWorkspaceId = workspaceId;
+    } else {
+      const currentWorkspace = await getCurrentWorkspaceAction();
+      if (!currentWorkspace) return [];
+      
+      await requireAuth();
+      const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
+      if (!hasAccess) return [];
+      
+      finalWorkspaceId = currentWorkspace.id;
+    }
 
     const supabase = await createClient();
 
@@ -223,7 +248,7 @@ export async function getAverageTimeByStageAction(): Promise<TimeByStage[]> {
     const { data: activities, error } = await supabase
       .from("lead_activities")
       .select("lead_id, old_value, new_value, created_at")
-      .eq("workspace_id", currentWorkspace.id)
+      .eq("workspace_id", finalWorkspaceId)
       .eq("action_type", "stage_changed")
       .order("lead_id")
       .order("created_at", { ascending: true });
@@ -304,14 +329,22 @@ export async function getAverageTimeByStageAction(): Promise<TimeByStage[]> {
 /**
  * Performance por usuário responsável
  */
-export async function getPerformanceByUserAction(): Promise<PerformanceByUser[]> {
+export async function getPerformanceByUserAction(workspaceId?: string): Promise<PerformanceByUser[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
-    if (!currentWorkspace) return [];
-
-    await requireAuth();
-    const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
-    if (!hasAccess) return [];
+    let finalWorkspaceId: string;
+    
+    if (workspaceId) {
+      finalWorkspaceId = workspaceId;
+    } else {
+      const currentWorkspace = await getCurrentWorkspaceAction();
+      if (!currentWorkspace) return [];
+      
+      await requireAuth();
+      const hasAccess = await hasWorkspaceAccess(currentWorkspace.id);
+      if (!hasAccess) return [];
+      
+      finalWorkspaceId = currentWorkspace.id;
+    }
 
     const supabase = await createClient();
 
@@ -319,13 +352,13 @@ export async function getPerformanceByUserAction(): Promise<PerformanceByUser[]>
     const { data: members, error: membersError } = await supabase
       .from("workspace_members")
       .select("user_id")
-      .eq("workspace_id", currentWorkspace.id);
+      .eq("workspace_id", finalWorkspaceId);
 
     // Também incluir o owner do workspace
     const { data: workspace } = await supabase
       .from("workspaces")
       .select("owner_id")
-      .eq("id", currentWorkspace.id)
+      .eq("id", finalWorkspaceId)
       .single();
 
     if (membersError) {

@@ -168,13 +168,7 @@ export function LeadAIMessagesSection({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-primary" />
-        <h3 className="text-sm font-medium">Gerar Mensagens com IA</h3>
-      </div>
-
+    <div className="space-y-4 pt-2">
       {/* Seleção de campanha */}
       {activeCampaigns.length > 0 ? (
         <div className="space-y-3">

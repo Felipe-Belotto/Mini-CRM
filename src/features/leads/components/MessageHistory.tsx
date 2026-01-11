@@ -58,17 +58,7 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ messages }) => {
   }
 
   return (
-    <div className="space-y-1">
-      {/* Header */}
-      <div className="flex items-center justify-between py-2">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          Histórico de Mensagens
-        </h3>
-        <Badge variant="secondary" className="text-xs">
-          {messages.length} {messages.length === 1 ? "mensagem" : "mensagens"}
-        </Badge>
-      </div>
-
+    <div className="space-y-1 pt-2">
       {/* Lista de mensagens */}
       <div className="divide-y">
         {messages.map((message) => {

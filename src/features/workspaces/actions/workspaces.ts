@@ -341,7 +341,10 @@ export async function getCurrentWorkspaceAction(): Promise<Workspace | null> {
       .single();
 
     if (profileError || !profile) {
-      console.error("Error fetching profile:", profileError);
+      // Só logar se houver um erro real (não apenas profile não encontrado)
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error("Error fetching profile:", profileError.message || profileError.code || profileError);
+      }
       return null;
     }
 

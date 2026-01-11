@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { getLeadActivitiesAction } from "@/features/activities/actions/activities";
+import { getLeadAISuggestionsAction } from "@/features/ai-messages/actions/ai-messages";
 import { usePipelineConfig } from "@/features/pipeline-config/hooks/use-pipeline-config";
 import type { KanbanStage, Lead, ValidationError } from "@/shared/types/crm";
 import { createLeadAction, moveLeadAction } from "../actions/leads";
+import { getLeadMessagesAction } from "../actions/messages";
 
 interface UsePipelineUIReturn {
   selectedLead: Lead | null;
@@ -34,6 +37,12 @@ export function usePipelineUI(): UsePipelineUIReturn {
   const handleLeadSelect = (lead: Lead) => {
     setSelectedLead(lead);
     setIsDrawerOpen(true);
+
+    void Promise.all([
+      getLeadMessagesAction(lead.id).catch(() => []),
+      getLeadActivitiesAction(lead.id).catch(() => []),
+      getLeadAISuggestionsAction(lead.id).catch(() => []),
+    ]);
   };
 
   const handleCloseDrawer = () => {

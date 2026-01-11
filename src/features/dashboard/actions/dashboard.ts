@@ -63,15 +63,15 @@ export async function getDashboardMetricsAction(): Promise<DashboardMetrics | nu
 /**
  * Server Action para buscar leads do workspace atual
  */
-export async function getCurrentWorkspaceLeadsAction(): Promise<Lead[]> {
+export async function getCurrentWorkspaceLeadsAction(workspaceId?: string): Promise<Lead[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
 
-    if (!currentWorkspace) {
+    if (!finalWorkspaceId) {
       return [];
     }
 
-    return getLeadsAction(currentWorkspace.id);
+    return getLeadsAction(finalWorkspaceId);
   } catch (error) {
     console.error("Error in getCurrentWorkspaceLeadsAction:", error);
     return [];
@@ -81,17 +81,17 @@ export async function getCurrentWorkspaceLeadsAction(): Promise<Lead[]> {
 /**
  * Server Action para buscar campanhas do workspace atual
  */
-export async function getCurrentWorkspaceCampaignsAction(): Promise<
+export async function getCurrentWorkspaceCampaignsAction(workspaceId?: string): Promise<
   Campaign[]
 > {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
 
-    if (!currentWorkspace) {
+    if (!finalWorkspaceId) {
       return [];
     }
 
-    return getCampaignsAction(currentWorkspace.id);
+    return getCampaignsAction(finalWorkspaceId);
   } catch (error) {
     console.error("Error in getCurrentWorkspaceCampaignsAction:", error);
     return [];
@@ -102,15 +102,15 @@ export async function getCurrentWorkspaceCampaignsAction(): Promise<
  * Server Action para buscar membros do workspace atual como User[]
  * Usado para o ResponsibleSelect
  */
-export async function getCurrentWorkspaceUsersAction(): Promise<User[]> {
+export async function getCurrentWorkspaceUsersAction(workspaceId?: string): Promise<User[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
 
-    if (!currentWorkspace) {
+    if (!finalWorkspaceId) {
       return [];
     }
 
-    const members = await getWorkspaceMembersAction(currentWorkspace.id);
+    const members = await getWorkspaceMembersAction(finalWorkspaceId);
 
     // Converter WorkspaceMember[] para User[]
     return members.map((member) => ({
@@ -130,15 +130,15 @@ export async function getCurrentWorkspaceUsersAction(): Promise<User[]> {
 /**
  * Server Action para buscar campos personalizados do workspace atual
  */
-export async function getCurrentWorkspaceCustomFieldsAction(): Promise<CustomField[]> {
+export async function getCurrentWorkspaceCustomFieldsAction(workspaceId?: string): Promise<CustomField[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
 
-    if (!currentWorkspace) {
+    if (!finalWorkspaceId) {
       return [];
     }
 
-    return getCustomFieldsAction(currentWorkspace.id);
+    return getCustomFieldsAction(finalWorkspaceId);
   } catch (error) {
     console.error("Error in getCurrentWorkspaceCustomFieldsAction:", error);
     return [];
@@ -148,15 +148,15 @@ export async function getCurrentWorkspaceCustomFieldsAction(): Promise<CustomFie
 /**
  * Server Action para buscar leads arquivados do workspace atual
  */
-export async function getCurrentWorkspaceArchivedLeadsAction(): Promise<Lead[]> {
+export async function getCurrentWorkspaceArchivedLeadsAction(workspaceId?: string): Promise<Lead[]> {
   try {
-    const currentWorkspace = await getCurrentWorkspaceAction();
+    const finalWorkspaceId = workspaceId || (await getCurrentWorkspaceAction())?.id;
 
-    if (!currentWorkspace) {
+    if (!finalWorkspaceId) {
       return [];
     }
 
-    return getArchivedLeadsAction(currentWorkspace.id);
+    return getArchivedLeadsAction(finalWorkspaceId);
   } catch (error) {
     console.error("Error in getCurrentWorkspaceArchivedLeadsAction:", error);
     return [];
