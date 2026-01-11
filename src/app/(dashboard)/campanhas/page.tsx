@@ -2,6 +2,8 @@ import { addCampaignFromFormAction } from "@/features/campaigns/actions/campaign
 import { CampaignsUI } from "@/features/campaigns/components/CampaignsUI";
 import { getCurrentWorkspaceCampaignsAction } from "@/features/dashboard/actions/dashboard";
 
+export const dynamic = "force-dynamic";
+
 export default async function CampanhasPage() {
   const campaigns = await getCurrentWorkspaceCampaignsAction();
 

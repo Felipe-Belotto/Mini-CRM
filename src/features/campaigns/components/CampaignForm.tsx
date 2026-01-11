@@ -3,6 +3,7 @@
 import { Label } from "@/shared/components/ui/label";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { Slider } from "@/shared/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -10,7 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import type { CampaignFormData } from "../lib/campaign-utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
+import { type CampaignFormData, FORMALITY_LEVEL_LABELS } from "../lib/campaign-utils";
 import { KANBAN_COLUMNS } from "@/shared/types/crm";
 
 interface CampaignFormProps {
@@ -73,6 +81,52 @@ export function CampaignForm({ formData, onFieldChange }: CampaignFormProps) {
           placeholder="Instruções específicas para geração de mensagens..."
           rows={3}
         />
+      </div>
+
+      <div className="grid gap-2">
+        <div className="flex items-center gap-2">
+          <Label htmlFor="formalityLevel">Nível de Formalidade (Opcional)</Label>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-sm">
+                  Define o nível de formalidade das mensagens geradas pela IA.
+                  Se não definido, será usado automaticamente por canal:
+                  WhatsApp mais informal, Email mais formal.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-4">
+            <Slider
+              id="formalityLevel"
+              min={0}
+              max={5}
+              step={1}
+              value={[formData.formalityLevel ?? 0]}
+              onValueChange={(value) =>
+                onFieldChange("formalityLevel", value[0] === 0 ? undefined : value[0])
+              }
+              className="flex-1"
+            />
+            <span className="text-sm text-muted-foreground w-28 text-right">
+              {formData.formalityLevel
+                ? FORMALITY_LEVEL_LABELS[formData.formalityLevel]
+                : "Automático"}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground px-1">
+            <span>Auto</span>
+            <span>Informal</span>
+            <span>Neutro</span>
+            <span>Formal</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-2">

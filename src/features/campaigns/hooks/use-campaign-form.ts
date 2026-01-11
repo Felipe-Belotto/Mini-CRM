@@ -18,6 +18,7 @@ const initialFormData: CampaignFormData = {
   aiInstructions: "",
   status: "active",
   triggerStage: undefined,
+  formalityLevel: undefined,
 };
 
 export function useCampaignForm({ onAddCampaign }: UseCampaignFormProps) {

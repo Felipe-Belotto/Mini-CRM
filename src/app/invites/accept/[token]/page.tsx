@@ -6,6 +6,8 @@ import { hasWorkspaceAccess } from "@/shared/lib/supabase/utils";
 import { switchWorkspaceAction } from "@/features/workspaces/actions/workspaces";
 import { InviteAcceptPageClient } from "./InviteAcceptPageClient";
 
+export const dynamic = "force-dynamic";
+
 interface InvitePageProps {
   params: Promise<{ token: string }>;
 }

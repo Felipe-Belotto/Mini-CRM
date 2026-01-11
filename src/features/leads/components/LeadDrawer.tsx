@@ -13,9 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
-import { useAuth } from "@/features/auth/hooks/use-auth";
-import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { ActivityTimeline } from "@/features/activities/components/ActivityTimeline";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,16 +41,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/shared/components/ui/tabs";
-import { useToast } from "@/shared/hooks/use-toast";
-import type { Lead, User as UserType } from "@/shared/types/crm";
-import {
-  archiveLeadAction,
-  deleteLeadAction,
-  restoreLeadAction,
-} from "../actions/leads";
-import { uploadLeadAvatarAction } from "../actions/upload-avatar";
-import { ActivityTimeline } from "@/features/activities/components/ActivityTimeline";
-import { useLeadDrawer } from "../hooks/use-lead-drawer";
+import type {
+  Campaign,
+  KanbanStage,
+  Lead,
+  User as UserType,
+  ValidationError,
+} from "@/shared/types/crm";
+import { useLeadDrawerState } from "../hooks/use-lead-drawer-state";
 import { getInitials } from "../lib/avatar-utils";
 import { LeadDetailsTab } from "./LeadDetailsTab";
 import { LeadMessagesTab } from "./LeadMessagesTab";
@@ -62,8 +58,13 @@ interface LeadDrawerProps {
   lead: Lead | null;
   isOpen: boolean;
   users: UserType[];
+  campaigns: Campaign[];
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Lead>) => Promise<void>;
+  onMoveLead?: (
+    leadId: string,
+    newStage: KanbanStage,
+  ) => Promise<ValidationError[] | null>;
   onArchive?: (id: string) => void;
   onDelete?: (id: string) => void;
   onRestore?: (id: string) => void;
@@ -73,183 +74,52 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
   lead,
   isOpen,
   users,
+  campaigns,
   onClose,
   onUpdate,
+  onMoveLead,
   onArchive,
   onDelete,
   onRestore,
 }) => {
-  const { user: currentUser } = useAuth();
-  const { currentWorkspace } = useWorkspace();
-  const { toast } = useToast();
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState("details");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isActioning, setIsActioning] = useState(false);
-
-  const isArchived = lead?.archivedAt !== undefined;
-
-  const handleArchive = async () => {
-    if (!lead) return;
-    setIsActioning(true);
-    try {
-      await archiveLeadAction(lead.id);
-      toast({
-        title: "Lead arquivado",
-        description: "O lead foi movido para o arquivo.",
-      });
-      onArchive?.(lead.id);
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Erro ao arquivar",
-        description:
-          error instanceof Error ? error.message : "Não foi possível arquivar o lead",
-        variant: "destructive",
-      });
-    } finally {
-      setIsActioning(false);
-    }
-  };
-
-  const handleRestore = async () => {
-    if (!lead) return;
-    setIsActioning(true);
-    try {
-      await restoreLeadAction(lead.id);
-      toast({
-        title: "Lead restaurado",
-        description: "O lead foi restaurado com sucesso.",
-      });
-      onRestore?.(lead.id);
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Erro ao restaurar",
-        description:
-          error instanceof Error ? error.message : "Não foi possível restaurar o lead",
-        variant: "destructive",
-      });
-    } finally {
-      setIsActioning(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!lead) return;
-    setIsActioning(true);
-    try {
-      await deleteLeadAction(lead.id);
-      toast({
-        title: "Lead excluído",
-        description: "O lead foi excluído permanentemente.",
-      });
-      onDelete?.(lead.id);
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Erro ao excluir",
-        description:
-          error instanceof Error ? error.message : "Não foi possível excluir o lead",
-        variant: "destructive",
-      });
-    } finally {
-      setIsActioning(false);
-      setShowDeleteDialog(false);
-    }
-  };
-
-  const mockLead: Lead = {
-    id: "",
-    name: "",
-    email: "",
-    phone: "",
-    position: "",
-    company: "",
-    stage: "base",
-    workspaceId: "",
-    responsibleIds: [],
-    sortOrder: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const actualLead = lead || mockLead;
-
-  const { customFields, getCustomFieldValue } = useLeadDrawer({
-    lead: actualLead,
-    campaigns: [],
+  const {
+    avatarFile,
+    isUploadingAvatar,
+    activeTab,
+    setActiveTab,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    isActioning,
+    messages,
+    activities,
+    isArchived,
+    customFields,
+    getCustomFieldValue,
+    customFieldValues,
+    currentUser,
+    handleClose,
+    handleArchive,
+    handleRestore,
+    handleDelete,
+    handleCustomFieldChange,
+    handleAvatarChange,
+    handleAvatarRemove,
+    handleResponsibleChange,
+  } = useLeadDrawerState({
+    lead,
+    isOpen,
+    campaigns,
+    onClose,
+    onUpdate,
+    onArchive,
+    onDelete,
+    onRestore,
   });
 
   if (!lead) return null;
 
-  const handleCustomFieldChange = (fieldId: string, value: string) => {
-    const field = customFields.find((f) => f.id === fieldId);
-    if (!field) return;
-
-    if (field.name.toLowerCase() === "segmento") {
-      onUpdate(lead.id, { segment: value });
-    } else if (field.name.toLowerCase() === "faturamento") {
-      onUpdate(lead.id, { revenue: value });
-    }
-  };
-
-  const handleAvatarChange = async (file: File | null) => {
-    setAvatarFile(file);
-
-    if (file && currentWorkspace) {
-      setIsUploadingAvatar(true);
-      try {
-        const result = await uploadLeadAvatarAction(
-          lead.id,
-          currentWorkspace.id,
-          file,
-        );
-
-        if (result.success && result.url) {
-          await onUpdate(lead.id, { avatarUrl: result.url });
-          setAvatarFile(null);
-          toast({
-            title: "Avatar atualizado",
-            description: "O avatar do lead foi atualizado com sucesso.",
-          });
-        } else {
-          toast({
-            title: "Erro ao fazer upload",
-            description:
-              result.error || "Não foi possível fazer upload do avatar",
-            variant: "destructive",
-          });
-          setAvatarFile(null);
-        }
-      } catch (error) {
-        toast({
-          title: "Erro ao fazer upload",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Ocorreu um erro ao fazer upload do avatar",
-          variant: "destructive",
-        });
-        setAvatarFile(null);
-      } finally {
-        setIsUploadingAvatar(false);
-      }
-    }
-  };
-
-  const handleAvatarRemove = () => {
-    setAvatarFile(null);
-    onUpdate(lead.id, { avatarUrl: undefined });
-  };
-
-  const handleResponsibleChange = async (responsibleIds: string[]) => {
-    await onUpdate(lead.id, { responsibleIds });
-  };
-
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
+    <Sheet open={isOpen} onOpenChange={handleClose}>
       <SheetContent className="w-full sm:max-w-2xl flex flex-col p-0">
         {/* Header com avatar e informações do lead */}
         <div className="flex-shrink-0 bg-muted border-b px-6 py-5">
@@ -314,18 +184,18 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
                 Detalhes
               </TabsTrigger>
               <TabsTrigger
-                value="notes"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Notas
-              </TabsTrigger>
-              <TabsTrigger
                 value="messages"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Mensagens
+              </TabsTrigger>
+              <TabsTrigger
+                value="notes"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-6 py-3"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Notas
               </TabsTrigger>
               <TabsTrigger
                 value="history"
@@ -393,6 +263,17 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
                 />
               </TabsContent>
 
+              <TabsContent value="messages" className="mt-0">
+                <LeadMessagesTab
+                  lead={lead}
+                  campaigns={campaigns}
+                  customFields={customFields}
+                  customFieldValues={customFieldValues}
+                  initialMessages={messages}
+                  onMoveLead={onMoveLead}
+                />
+              </TabsContent>
+
               <TabsContent value="notes" className="mt-0">
                 <LeadNotesTab
                   lead={lead}
@@ -402,12 +283,8 @@ export const LeadDrawer: React.FC<LeadDrawerProps> = ({
                 />
               </TabsContent>
 
-              <TabsContent value="messages" className="mt-0">
-                <LeadMessagesTab lead={lead} />
-              </TabsContent>
-
               <TabsContent value="history" className="mt-0">
-                <ActivityTimeline leadId={lead.id} />
+                <ActivityTimeline activities={activities} />
               </TabsContent>
             </div>
           </ScrollArea>

@@ -8,6 +8,8 @@ import {
 } from "@/features/dashboard/actions/metrics";
 import { DashboardUI } from "@/features/dashboard/components/DashboardUI";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const metrics = await getDashboardMetricsAction();
 

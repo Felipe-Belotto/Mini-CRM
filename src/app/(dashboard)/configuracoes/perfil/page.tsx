@@ -1,11 +1,10 @@
-import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getProfileDataAction } from "@/features/auth/actions/onboarding";
 import { EditProfileForm } from "./EditProfileForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditarPerfilPage() {
-  // Força renderização dinâmica pois usa cookies
-  await connection();
   
   const result = await getProfileDataAction();
 

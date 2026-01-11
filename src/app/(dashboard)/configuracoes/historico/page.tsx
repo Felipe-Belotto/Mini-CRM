@@ -1,13 +1,12 @@
-import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
 import { canUpdateWorkspace } from "@/shared/lib/supabase/utils";
 import { getRecentWorkspaceActivitiesAction } from "@/features/activities/actions/activities";
 import { WorkspaceActivityHistory } from "@/features/activities/components/WorkspaceActivityHistory";
 
+export const dynamic = "force-dynamic";
+
 export default async function HistoricoPage() {
-  // Força renderização dinâmica pois usa cookies
-  await connection();
 
   const workspace = await getCurrentWorkspaceAction();
 

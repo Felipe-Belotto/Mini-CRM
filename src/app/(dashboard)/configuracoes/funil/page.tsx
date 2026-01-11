@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
 import { getPipelineConfigAction } from "@/features/pipeline-config/actions/pipeline-config";
@@ -6,9 +5,9 @@ import { getPipelineStagesAction } from "@/features/pipeline-config/actions/stag
 import { getCustomFieldsAction } from "@/features/custom-fields/actions/custom-fields";
 import { PipelineConfigManager } from "@/features/pipeline-config/components/PipelineConfigManager";
 
+export const dynamic = "force-dynamic";
+
 export default async function PipelineConfigPage() {
-  // Força renderização dinâmica pois usa cookies
-  await connection();
   
   const workspace = await getCurrentWorkspaceAction();
 

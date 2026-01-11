@@ -540,7 +540,36 @@ export async function getLeadsAction(
       return [];
     }
 
-    return dbLeads.map(mapDbLeadToLead);
+    // Buscar contagem de mensagens para todos os leads de uma vez
+    const leadIds = dbLeads.map((l) => l.id);
+    const messagesCountMap = new Map<string, number>();
+
+    if (leadIds.length > 0) {
+      const { data: messagesData } = await supabase
+        .from("lead_messages_sent")
+        .select("lead_id")
+        .in("lead_id", leadIds);
+
+      if (messagesData) {
+        for (const msg of messagesData) {
+          const currentCount = messagesCountMap.get(msg.lead_id) || 0;
+          messagesCountMap.set(msg.lead_id, currentCount + 1);
+        }
+      }
+    }
+
+    // Adicionar contagem de mensagens aos leads (como JSON string para compatibilidade)
+    const leadsWithCounts = dbLeads.map((lead) => {
+      const messagesCount = messagesCountMap.get(lead.id) || 0;
+      // Converter contagem para formato JSON array para compatibilidade com countJsonArray
+      const messagesJson = messagesCount > 0 ? JSON.stringify(Array(messagesCount).fill(null)) : null;
+      return {
+        ...lead,
+        messages: messagesJson || lead.messages,
+      };
+    });
+
+    return leadsWithCounts.map(mapDbLeadToLead);
   } catch (error) {
     console.error("Error in getLeadsAction:", error);
     return [];
@@ -713,7 +742,36 @@ export async function getArchivedLeadsAction(
       return [];
     }
 
-    return dbLeads.map(mapDbLeadToLead);
+    // Buscar contagem de mensagens para todos os leads arquivados
+    const leadIds = dbLeads.map((l) => l.id);
+    const messagesCountMap = new Map<string, number>();
+
+    if (leadIds.length > 0) {
+      const { data: messagesData } = await supabase
+        .from("lead_messages_sent")
+        .select("lead_id")
+        .in("lead_id", leadIds);
+
+      if (messagesData) {
+        for (const msg of messagesData) {
+          const currentCount = messagesCountMap.get(msg.lead_id) || 0;
+          messagesCountMap.set(msg.lead_id, currentCount + 1);
+        }
+      }
+    }
+
+    // Adicionar contagem de mensagens aos leads (como JSON string para compatibilidade)
+    const leadsWithCounts = dbLeads.map((lead) => {
+      const messagesCount = messagesCountMap.get(lead.id) || 0;
+      // Converter contagem para formato JSON array para compatibilidade com countJsonArray
+      const messagesJson = messagesCount > 0 ? JSON.stringify(Array(messagesCount).fill(null)) : null;
+      return {
+        ...lead,
+        messages: messagesJson || lead.messages,
+      };
+    });
+
+    return leadsWithCounts.map(mapDbLeadToLead);
   } catch (error) {
     console.error("Error in getArchivedLeadsAction:", error);
     return [];

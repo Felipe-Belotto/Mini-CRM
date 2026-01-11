@@ -1,12 +1,21 @@
 "use server";
 
-import type { Campaign, Lead } from "@/shared/types/crm";
-import { buildPrompt } from "../lib/prompt-builder";
+import type { Campaign, Lead, CustomField } from "@/shared/types/crm";
+import {
+  prepareLeadDataForAI,
+  prepareCampaignDataForAI,
+  type MessageChannel,
+} from "../lib/prompt-builder";
 import type { AISuggestion } from "@/features/leads/lib/message-utils";
+import { getCurrentUser } from "@/shared/lib/supabase/utils";
+import { getCurrentWorkspaceAction } from "@/features/workspaces/actions/workspaces";
 
 export interface GenerateMessagesInput {
   campaign: Campaign;
   lead: Lead;
+  customFields?: CustomField[];
+  customFieldValues?: Record<string, string>;
+  channels?: MessageChannel[];
 }
 
 export interface GenerateMessagesResult {
@@ -17,44 +26,105 @@ export interface GenerateMessagesResult {
 
 /**
  * Server Action para gerar mensagens com IA
- * TODO: Implementar chamada real para Edge Function do Supabase
- * A Edge Function chamará a API de LLM (OpenAI, Google AI, Anthropic, etc.)
+ * Chama a Edge Function do Supabase que usa Google Gemini
  */
 export async function generateMessagesAction(
   input: GenerateMessagesInput,
 ): Promise<GenerateMessagesResult> {
-  // Simulação de delay de rede (chamada à API)
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const { campaign, lead, customFields, customFieldValues, channels = ["whatsapp", "email"] } = input;
 
-  // Mock: construir prompt e simular resposta da IA
-  const prompt = buildPrompt(input.campaign, input.lead);
+  try {
+    // Buscar dados do usuário e workspace
+    const [user, workspace] = await Promise.all([
+      getCurrentUser(),
+      getCurrentWorkspaceAction(),
+    ]);
 
-  // No backend real, isso seria:
-  // 1. Chamar Edge Function do Supabase
-  // 2. Edge Function chama API de LLM
-  // 3. Retorna mensagens geradas
+    // Preparar dados para a Edge Function
+    const leadData = prepareLeadDataForAI(lead, customFields, customFieldValues);
+    const campaignData = prepareCampaignDataForAI(campaign);
 
-  // Mock: gerar sugestões baseadas no contexto
-  const suggestions: AISuggestion[] = [
-    {
-      id: "1",
-      type: "WhatsApp",
-      message: `Olá ${input.lead.name}! Vi que você atua como ${input.lead.position} na ${input.lead.company}. ${input.campaign.context} Posso te mostrar como isso pode ajudar sua empresa em uma conversa de 15 minutos?`,
-    },
-    {
-      id: "2",
-      type: "Email",
-      message: `Prezado(a) ${input.lead.name},\n\nEspero que esteja bem! ${input.campaign.context}\n\nGostaria de agendar uma breve conversa para entender seus desafios atuais?\n\nAbraços!`,
-    },
-    {
-      id: "3",
-      type: "LinkedIn",
-      message: `Oi ${input.lead.name}! Acompanho o trabalho da ${input.lead.company} e admiro o que vocês têm construído. ${input.campaign.context} Topa um café virtual?`,
-    },
-  ];
+    // Preparar dados do remetente (usuário/workspace)
+    const senderData = {
+      name: user?.fullName || "Usuário",
+      position: "", // Não temos cargo do usuário no sistema
+      company: workspace?.name || "Workspace",
+    };
 
-  return {
-    success: true,
-    suggestions,
-  };
+    // URL da Edge Function
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    // Usa service_role key (segura, só existe no servidor) para chamar Edge Function
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured");
+      return {
+        success: false,
+        error: "Configuração do servidor incompleta. Contate o suporte.",
+      };
+    }
+
+    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/generate-ai-messages`;
+
+    // Chamar Edge Function com autenticação
+    const response = await fetch(edgeFunctionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseServiceKey}`,
+      },
+      body: JSON.stringify({
+        campaign: campaignData,
+        lead: leadData,
+        channels,
+        variationsPerChannel: 2,
+        sender: senderData,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Edge Function error:", response.status, errorData);
+
+      if (response.status === 404) {
+        return {
+          success: false,
+          error: "Serviço de IA não configurado. Verifique se a Edge Function está deployada.",
+        };
+      }
+
+      if (response.status === 500) {
+        return {
+          success: false,
+          error: "Erro no serviço de IA. Verifique se a GEMINI_API_KEY está configurada no Supabase.",
+        };
+      }
+
+      return {
+        success: false,
+        error: errorData.error || `Erro ao gerar mensagens (${response.status})`,
+      };
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || "Erro desconhecido ao gerar mensagens",
+      };
+    }
+
+    return {
+      success: true,
+      suggestions: result.suggestions,
+    };
+  } catch (error) {
+    console.error("Error in generateMessagesAction:", error);
+    
+    return {
+      success: false,
+      error: "Erro de conexão com o serviço de IA. Tente novamente.",
+    };
+  }
 }

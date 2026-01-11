@@ -85,6 +85,7 @@ export interface Campaign {
   aiInstructions: string;
   status: "active" | "paused" | "finished";
   triggerStage?: KanbanStage;
+  formalityLevel?: number; // 1-5, onde 1=muito informal, 5=muito formal
   workspaceId: string;
   leadsCount: number;
   createdAt: Date;

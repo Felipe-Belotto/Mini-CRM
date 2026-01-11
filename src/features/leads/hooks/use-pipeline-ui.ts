@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { usePipelineConfig } from "@/features/pipeline-config/hooks/use-pipeline-config";
 import type { KanbanStage, Lead, ValidationError } from "@/shared/types/crm";
 import { createLeadAction, moveLeadAction } from "../actions/leads";
-import { usePipelineConfig } from "@/features/pipeline-config/hooks/use-pipeline-config";
 
 interface UsePipelineUIReturn {
   selectedLead: Lead | null;

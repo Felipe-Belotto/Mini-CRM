@@ -1,8 +1,88 @@
-import type { Campaign, Lead } from "@/shared/types/crm";
+import type { Campaign, Lead, CustomField } from "@/shared/types/crm";
+
+export type MessageChannel = "whatsapp" | "email";
 
 /**
- * Constrói o prompt para geração de mensagens com IA
- * Combina contexto da campanha, instruções e dados do lead
+ * Interface para dados do lead enviados à Edge Function
+ */
+export interface LeadDataForAI {
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  company: string;
+  segment?: string;
+  revenue?: string;
+  notes?: string;
+  customFields?: Record<string, string>;
+}
+
+/**
+ * Interface para dados da campanha enviados à Edge Function
+ */
+export interface CampaignDataForAI {
+  name: string;
+  context: string;
+  voiceTone: "formal" | "informal" | "neutro";
+  aiInstructions: string;
+  formalityLevel?: number;
+}
+
+/**
+ * Prepara os dados do lead para envio à Edge Function
+ * Inclui campos personalizados se fornecidos
+ */
+export function prepareLeadDataForAI(
+  lead: Lead,
+  customFields?: CustomField[],
+  customFieldValues?: Record<string, string>,
+): LeadDataForAI {
+  const leadData: LeadDataForAI = {
+    name: lead.name || "",
+    email: lead.email || "",
+    phone: lead.phone || "",
+    position: lead.position || "",
+    company: lead.company || "",
+    segment: lead.segment,
+    revenue: lead.revenue,
+    notes: lead.notes,
+  };
+
+  // Adicionar campos personalizados se existirem
+  if (customFields && customFieldValues) {
+    const customFieldsMap: Record<string, string> = {};
+    
+    for (const field of customFields) {
+      const value = customFieldValues[field.id];
+      if (value) {
+        customFieldsMap[field.name] = value;
+      }
+    }
+
+    if (Object.keys(customFieldsMap).length > 0) {
+      leadData.customFields = customFieldsMap;
+    }
+  }
+
+  return leadData;
+}
+
+/**
+ * Prepara os dados da campanha para envio à Edge Function
+ */
+export function prepareCampaignDataForAI(campaign: Campaign): CampaignDataForAI {
+  return {
+    name: campaign.name,
+    context: campaign.context,
+    voiceTone: campaign.voiceTone,
+    aiInstructions: campaign.aiInstructions,
+    formalityLevel: campaign.formalityLevel,
+  };
+}
+
+/**
+ * Constrói o prompt para geração de mensagens com IA (legado - usado localmente)
+ * Mantido para compatibilidade, a Edge Function tem sua própria lógica de prompts
  */
 export function buildPrompt(
   campaign: Campaign,
@@ -31,9 +111,11 @@ ${campaign.aiInstructions || "Seja profissional e direto ao ponto."}
 
 TOM DE VOZ: ${campaign.voiceTone}
 
+NÍVEL DE FORMALIDADE: ${campaign.formalityLevel || "Automático por canal"}
+
 ${leadData}
 
-Gere 3 variações de mensagens personalizadas para este lead, considerando:
+Gere 2 variações de mensagens para WhatsApp e 2 para Email, considerando:
 1. O contexto da campanha
 2. Os dados específicos do lead
 3. O tom de voz solicitado
@@ -46,8 +128,11 @@ As mensagens devem ser:
 - Concisas mas informativas
 - Com call-to-action claro
 
+Para WhatsApp: mais casual, pode usar emojis moderadamente
+Para Email: estrutura formal com assunto, saudação, corpo e fechamento
+
 Formato de resposta: JSON com array de objetos, cada um contendo:
-- type: "WhatsApp" | "Email" | "LinkedIn"
+- type: "WhatsApp" | "Email"
 - message: string (mensagem completa)
 `.trim();
 

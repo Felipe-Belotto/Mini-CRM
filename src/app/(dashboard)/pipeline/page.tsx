@@ -8,6 +8,8 @@ import {
 import { updateLeadAction } from "@/features/leads/actions/leads";
 import { PipelineUI } from "@/features/leads/components/PipelineUI";
 
+export const dynamic = "force-dynamic";
+
 export default async function PipelinePage() {
   const [leads, archivedLeads, campaigns, users, customFields] = await Promise.all([
     getCurrentWorkspaceLeadsAction(),

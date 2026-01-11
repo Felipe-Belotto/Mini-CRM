@@ -72,7 +72,8 @@ export async function getLeadActivitiesAction(
         *,
         profiles:user_id (
           id,
-          full_name,
+          first_name,
+          last_name,
           avatar_url
         )
       `)
@@ -89,25 +90,40 @@ export async function getLeadActivitiesAction(
     }
 
     // Mapear para o tipo LeadActivity (campos JSONB já vêm como objetos)
-    return activities.map((activity) => ({
-      id: activity.id,
-      leadId: activity.lead_id,
-      workspaceId: activity.workspace_id,
-      userId: activity.user_id,
-      actionType: activity.action_type as LeadActivity["actionType"],
-      fieldName: activity.field_name,
-      oldValue: activity.old_value ?? null,
-      newValue: activity.new_value ?? null,
-      metadata: activity.metadata ?? null,
-      createdAt: new Date(activity.created_at),
-      user: activity.profiles
-        ? {
-            id: activity.profiles.id,
-            fullName: activity.profiles.full_name,
-            avatarUrl: activity.profiles.avatar_url || undefined,
-          }
-        : undefined,
-    }));
+    return activities.map((activity) => {
+      const profile = activity.profiles as {
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+        avatar_url: string | null;
+      } | null;
+
+      const fullName = profile
+        ? profile.first_name && profile.last_name
+          ? `${profile.first_name} ${profile.last_name}`
+          : profile.first_name || profile.last_name || ""
+        : "";
+
+      return {
+        id: activity.id,
+        leadId: activity.lead_id,
+        workspaceId: activity.workspace_id,
+        userId: activity.user_id,
+        actionType: activity.action_type as LeadActivity["actionType"],
+        fieldName: activity.field_name,
+        oldValue: activity.old_value ?? null,
+        newValue: activity.new_value ?? null,
+        metadata: activity.metadata ?? null,
+        createdAt: new Date(activity.created_at),
+        user: profile
+          ? {
+              id: profile.id,
+              fullName,
+              avatarUrl: profile.avatar_url || undefined,
+            }
+          : undefined,
+      };
+    });
   } catch (error) {
     console.error("Error in getLeadActivitiesAction:", error);
     return [];
@@ -137,7 +153,8 @@ export async function getRecentWorkspaceActivitiesAction(
         *,
         profiles:user_id (
           id,
-          full_name,
+          first_name,
+          last_name,
           avatar_url
         )
       `)
@@ -160,25 +177,40 @@ export async function getRecentWorkspaceActivitiesAction(
     }
 
     // Campos JSONB já vêm como objetos do Supabase
-    return activities.map((activity) => ({
-      id: activity.id,
-      leadId: activity.lead_id,
-      workspaceId: activity.workspace_id,
-      userId: activity.user_id,
-      actionType: activity.action_type as LeadActivity["actionType"],
-      fieldName: activity.field_name,
-      oldValue: activity.old_value ?? null,
-      newValue: activity.new_value ?? null,
-      metadata: activity.metadata ?? null,
-      createdAt: new Date(activity.created_at),
-      user: activity.profiles
-        ? {
-            id: activity.profiles.id,
-            fullName: activity.profiles.full_name,
-            avatarUrl: activity.profiles.avatar_url || undefined,
-          }
-        : undefined,
-    }));
+    return activities.map((activity) => {
+      const profile = activity.profiles as {
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+        avatar_url: string | null;
+      } | null;
+
+      const fullName = profile
+        ? profile.first_name && profile.last_name
+          ? `${profile.first_name} ${profile.last_name}`
+          : profile.first_name || profile.last_name || ""
+        : "";
+
+      return {
+        id: activity.id,
+        leadId: activity.lead_id,
+        workspaceId: activity.workspace_id,
+        userId: activity.user_id,
+        actionType: activity.action_type as LeadActivity["actionType"],
+        fieldName: activity.field_name,
+        oldValue: activity.old_value ?? null,
+        newValue: activity.new_value ?? null,
+        metadata: activity.metadata ?? null,
+        createdAt: new Date(activity.created_at),
+        user: profile
+          ? {
+              id: profile.id,
+              fullName,
+              avatarUrl: profile.avatar_url || undefined,
+            }
+          : undefined,
+      };
+    });
   } catch (error) {
     console.error("Error in getRecentWorkspaceActivitiesAction:", error);
     return [];

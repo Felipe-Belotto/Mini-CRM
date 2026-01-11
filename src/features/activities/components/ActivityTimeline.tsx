@@ -4,16 +4,13 @@ import {
   Archive,
   ArrowRight,
   Edit,
-  Loader2,
   PlusCircle,
   RotateCcw,
   Send,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { cn } from "@/shared/lib/utils";
-import { getLeadActivitiesAction } from "../actions/activities";
 import {
   formatActivityMessage,
   getActivityColor,
@@ -22,7 +19,7 @@ import {
 import type { ActivityActionType, LeadActivity } from "../types";
 
 interface ActivityTimelineProps {
-  leadId: string;
+  activities: LeadActivity[];
 }
 
 const iconMap: Record<ActivityActionType, React.ReactNode> = {
@@ -35,35 +32,8 @@ const iconMap: Record<ActivityActionType, React.ReactNode> = {
 };
 
 export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
-  leadId,
+  activities,
 }) => {
-  const [activities, setActivities] = useState<LeadActivity[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadActivities() {
-      setIsLoading(true);
-      try {
-        const data = await getLeadActivitiesAction(leadId);
-        setActivities(data);
-      } catch (error) {
-        console.error("Error loading activities:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadActivities();
-  }, [leadId]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   if (activities.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -110,7 +80,10 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ activity, isLast }) => {
     minute: "2-digit",
   });
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | null | undefined) => {
+    if (!name || typeof name !== "string") {
+      return "?";
+    }
     return name
       .split(" ")
       .map((n) => n[0])
@@ -151,7 +124,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ activity, isLast }) => {
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-xs text-muted-foreground">
-                    {activity.user.fullName}
+                    {activity.user.fullName || "Usuário"}
                   </span>
                 </div>
               )}

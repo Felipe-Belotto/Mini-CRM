@@ -3,11 +3,13 @@
 import type React from "react";
 import {
   useCallback,
+  useEffect,
   useMemo,
   useOptimistic,
   useState,
   useTransition,
 } from "react";
+import { useSearchParams } from "next/navigation";
 import type {
   Campaign,
   CustomField,
@@ -46,6 +48,7 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
   customFields = [],
   onUpdateLead,
 }) => {
+  const searchParams = useSearchParams();
   const {
     selectedLead,
     isDrawerOpen,
@@ -208,6 +211,17 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
     return allLeads.find((l) => l.id === selectedLead.id) || selectedLead;
   }, [selectedLead, allLeads]);
 
+  useEffect(() => {
+    const leadIdFromParams = searchParams.get("lead");
+    if (leadIdFromParams && !isDrawerOpen && allLeads.length > 0) {
+      const leadFromParams = allLeads.find((l) => l.id === leadIdFromParams);
+      if (leadFromParams && (!selectedLead || selectedLead.id !== leadIdFromParams)) {
+        handleLeadSelect(leadFromParams);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLeads.length]);
+
   return (
     <div className="flex flex-col h-full">
       <PipelineFilters
@@ -238,8 +252,10 @@ export const PipelineUI: React.FC<PipelineUIProps> = ({
         lead={currentLead}
         isOpen={isDrawerOpen}
         users={users}
+        campaigns={campaigns}
         onClose={handleCloseDrawer}
         onUpdate={onUpdateLead}
+        onMoveLead={handleMoveLead}
         onArchive={handleOptimisticArchive}
         onRestore={handleOptimisticRestore}
         onDelete={handleOptimisticDelete}

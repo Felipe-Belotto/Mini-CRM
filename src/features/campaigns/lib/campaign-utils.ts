@@ -8,7 +8,19 @@ export interface CampaignFormData {
   aiInstructions: string;
   status: "active" | "paused" | "finished";
   triggerStage?: KanbanStage;
+  formalityLevel?: number; // 1-5, onde 1=muito informal, 5=muito formal
 }
+
+/**
+ * Labels para níveis de formalidade
+ */
+export const FORMALITY_LEVEL_LABELS: Record<number, string> = {
+  1: "Muito informal",
+  2: "Informal",
+  3: "Neutro",
+  4: "Formal",
+  5: "Muito formal",
+};
 
 /**
  * Mapeamento de cores para status de campanha

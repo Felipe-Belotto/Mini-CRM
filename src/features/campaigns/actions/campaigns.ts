@@ -8,7 +8,7 @@ import type { Campaign, CampaignRow, KanbanStage } from "@/shared/types/crm";
  * Mapeia dados do banco para o tipo Campaign
  */
 function mapDbCampaignToCampaign(
-  dbCampaign: CampaignRow,
+  dbCampaign: CampaignRow & { formality_level?: number | null },
   leadsCount: number,
 ): Campaign {
   return {
@@ -21,6 +21,7 @@ function mapDbCampaignToCampaign(
     triggerStage: dbCampaign.trigger_stage
       ? (dbCampaign.trigger_stage as KanbanStage)
       : undefined,
+    formalityLevel: dbCampaign.formality_level ?? undefined,
     workspaceId: dbCampaign.workspace_id,
     leadsCount,
     createdAt: new Date(dbCampaign.created_at),
@@ -85,6 +86,7 @@ export async function addCampaignAction(
         ai_instructions: campaign.aiInstructions,
         status: campaign.status,
         trigger_stage: campaign.triggerStage ?? null,
+        formality_level: campaign.formalityLevel ?? null,
       })
       .select()
       .single();
@@ -237,6 +239,8 @@ export async function updateCampaignAction(
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.triggerStage !== undefined)
       dbUpdates.trigger_stage = updates.triggerStage ?? null;
+    if (updates.formalityLevel !== undefined)
+      dbUpdates.formality_level = updates.formalityLevel ?? null;
 
     // Atualizar campanha no banco
     const { error } = await supabase

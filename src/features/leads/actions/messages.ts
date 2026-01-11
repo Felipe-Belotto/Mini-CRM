@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { requireAuth, hasWorkspaceAccess, getCurrentUser } from "@/shared/lib/supabase/utils";
 import { createActivityAction } from "@/features/activities/actions/activities";
@@ -82,6 +83,9 @@ export async function saveMessageAction(
       },
     });
 
+    // Revalidar página do pipeline para atualizar histórico de mensagens
+    revalidatePath("/pipeline");
+
     return {
       id: data.id,
       leadId: data.lead_id,
@@ -134,7 +138,8 @@ export async function getLeadMessagesAction(
         *,
         profiles:user_id (
           id,
-          full_name,
+          first_name,
+          last_name,
           avatar_url
         ),
         campaigns:campaign_id (
@@ -154,29 +159,45 @@ export async function getLeadMessagesAction(
       return [];
     }
 
-    return messages.map((msg) => ({
-      id: msg.id,
-      leadId: msg.lead_id,
-      workspaceId: msg.workspace_id,
-      campaignId: msg.campaign_id,
-      userId: msg.user_id,
-      channel: msg.channel,
-      content: msg.content,
-      sentAt: new Date(msg.sent_at),
-      user: msg.profiles
-        ? {
-            id: msg.profiles.id,
-            fullName: msg.profiles.full_name,
-            avatarUrl: msg.profiles.avatar_url || undefined,
-          }
-        : undefined,
-      campaign: msg.campaigns
-        ? {
-            id: msg.campaigns.id,
-            name: msg.campaigns.name,
-          }
-        : undefined,
-    }));
+    return messages.map((msg) => {
+      // Construir fullName a partir de first_name e last_name
+      const profile = msg.profiles as {
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+        avatar_url: string | null;
+      } | null;
+      
+      const fullName = profile
+        ? profile.first_name && profile.last_name
+          ? `${profile.first_name} ${profile.last_name}`
+          : profile.first_name || profile.last_name || ""
+        : "";
+
+      return {
+        id: msg.id,
+        leadId: msg.lead_id,
+        workspaceId: msg.workspace_id,
+        campaignId: msg.campaign_id,
+        userId: msg.user_id,
+        channel: msg.channel,
+        content: msg.content,
+        sentAt: new Date(msg.sent_at),
+        user: profile
+          ? {
+              id: profile.id,
+              fullName,
+              avatarUrl: profile.avatar_url || undefined,
+            }
+          : undefined,
+        campaign: msg.campaigns
+          ? {
+              id: msg.campaigns.id,
+              name: msg.campaigns.name,
+            }
+          : undefined,
+      };
+    });
   } catch (error) {
     console.error("Error in getLeadMessagesAction:", error);
     return [];

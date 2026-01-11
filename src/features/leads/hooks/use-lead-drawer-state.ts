@@ -1,0 +1,346 @@
+"use client";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
+import { useToast } from "@/shared/hooks/use-toast";
+import type {
+  Campaign,
+  CustomField,
+  KanbanStage,
+  Lead,
+  ValidationError,
+} from "@/shared/types/crm";
+import {
+  archiveLeadAction,
+  deleteLeadAction,
+  restoreLeadAction,
+} from "../actions/leads";
+import {
+  getLeadMessagesAction,
+  type LeadMessageSent,
+} from "../actions/messages";
+import { uploadLeadAvatarAction } from "../actions/upload-avatar";
+import { getLeadActivitiesAction } from "@/features/activities/actions/activities";
+import type { LeadActivity } from "@/features/activities/types";
+import { useLeadDrawer } from "./use-lead-drawer";
+
+interface UseLeadDrawerStateProps {
+  lead: Lead | null;
+  isOpen: boolean;
+  campaigns: Campaign[];
+  onClose: () => void;
+  onUpdate: (id: string, updates: Partial<Lead>) => Promise<void>;
+  onMoveLead?: (
+    leadId: string,
+    newStage: KanbanStage,
+  ) => Promise<ValidationError[] | null>;
+  onArchive?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onRestore?: (id: string) => void;
+}
+
+export function useLeadDrawerState({
+  lead,
+  isOpen,
+  campaigns,
+  onClose,
+  onUpdate,
+  onArchive,
+  onDelete,
+  onRestore,
+}: UseLeadDrawerStateProps) {
+  const { user: currentUser } = useAuth();
+  const { currentWorkspace } = useWorkspace();
+  const { toast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isActioning, setIsActioning] = useState(false);
+  const [messages, setMessages] = useState<LeadMessageSent[]>([]);
+  const [activities, setActivities] = useState<LeadActivity[]>([]);
+
+  const isArchived = lead?.archivedAt !== undefined;
+
+  const mockLead: Lead = {
+    id: "",
+    name: "",
+    email: "",
+    phone: "",
+    position: "",
+    company: "",
+    stage: "base",
+    workspaceId: "",
+    responsibleIds: [],
+    sortOrder: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const actualLead = lead || mockLead;
+
+  const { customFields, getCustomFieldValue } = useLeadDrawer({
+    lead: actualLead,
+    campaigns,
+  });
+
+  const createQueryString = useCallback(
+    (name: string, value: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === null) {
+        params.delete(name);
+      } else {
+        params.set(name, value);
+      }
+      return params.toString();
+    },
+    [searchParams],
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab("details");
+    }
+  }, [isOpen]);
+
+  const handleClose = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("lead");
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+    onClose();
+  }, [searchParams, pathname, router, onClose]);
+
+  useEffect(() => {
+    if (isOpen && lead?.id) {
+      const currentLeadParam = searchParams.get("lead");
+      if (currentLeadParam !== lead.id) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("lead", lead.id);
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, lead?.id]);
+
+  useEffect(() => {
+    if (actualLead?.id && actualLead.id !== "") {
+      getLeadMessagesAction(actualLead.id)
+        .then((data) => setMessages(data))
+        .catch((error) => {
+          console.error("Error loading messages:", error);
+          setMessages([]);
+        });
+
+      getLeadActivitiesAction(actualLead.id)
+        .then((data) => setActivities(data))
+        .catch((error) => {
+          console.error("Error loading activities:", error);
+          setActivities([]);
+        });
+    } else {
+      setMessages([]);
+      setActivities([]);
+    }
+  }, [actualLead?.id]);
+
+  const customFieldValues = useMemo(() => {
+    const values: Record<string, string> = {};
+    for (const field of customFields) {
+      const value = getCustomFieldValue(field.id);
+      if (value) {
+        values[field.id] = value;
+      }
+    }
+    return values;
+  }, [customFields, getCustomFieldValue]);
+
+  const handleArchive = useCallback(async () => {
+    if (!lead) return;
+    setIsActioning(true);
+    try {
+      await archiveLeadAction(lead.id);
+      toast({
+        title: "Lead arquivado",
+        description: "O lead foi movido para o arquivo.",
+      });
+      onArchive?.(lead.id);
+      handleClose();
+    } catch (error) {
+      toast({
+        title: "Erro ao arquivar",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível arquivar o lead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActioning(false);
+    }
+  }, [lead, toast, onArchive, handleClose]);
+
+  const handleRestore = useCallback(async () => {
+    if (!lead) return;
+    setIsActioning(true);
+    try {
+      await restoreLeadAction(lead.id);
+      toast({
+        title: "Lead restaurado",
+        description: "O lead foi restaurado com sucesso.",
+      });
+      onRestore?.(lead.id);
+      handleClose();
+    } catch (error) {
+      toast({
+        title: "Erro ao restaurar",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível restaurar o lead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActioning(false);
+    }
+  }, [lead, toast, onRestore, handleClose]);
+
+  const handleDelete = useCallback(async () => {
+    if (!lead) return;
+    setIsActioning(true);
+    try {
+      await deleteLeadAction(lead.id);
+      toast({
+        title: "Lead excluído",
+        description: "O lead foi excluído permanentemente.",
+      });
+      onDelete?.(lead.id);
+      handleClose();
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível excluir o lead",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActioning(false);
+      setShowDeleteDialog(false);
+    }
+  }, [lead, toast, onDelete, handleClose]);
+
+  const handleCustomFieldChange = useCallback(
+    (fieldId: string, value: string) => {
+      if (!lead) return;
+      const field = customFields.find((f) => f.id === fieldId);
+      if (!field) return;
+
+      if (field.name.toLowerCase() === "segmento") {
+        onUpdate(lead.id, { segment: value });
+      } else if (field.name.toLowerCase() === "faturamento") {
+        onUpdate(lead.id, { revenue: value });
+      }
+    },
+    [lead, customFields, onUpdate],
+  );
+
+  const handleAvatarChange = useCallback(
+    async (file: File | null) => {
+      if (!lead) return;
+      setAvatarFile(file);
+
+      if (file && currentWorkspace) {
+        setIsUploadingAvatar(true);
+        try {
+          const result = await uploadLeadAvatarAction(
+            lead.id,
+            currentWorkspace.id,
+            file,
+          );
+
+          if (result.success && result.url) {
+            await onUpdate(lead.id, { avatarUrl: result.url });
+            setAvatarFile(null);
+            toast({
+              title: "Avatar atualizado",
+              description: "O avatar do lead foi atualizado com sucesso.",
+            });
+          } else {
+            toast({
+              title: "Erro ao fazer upload",
+              description:
+                result.error || "Não foi possível fazer upload do avatar",
+              variant: "destructive",
+            });
+            setAvatarFile(null);
+          }
+        } catch (error) {
+          toast({
+            title: "Erro ao fazer upload",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Ocorreu um erro ao fazer upload do avatar",
+            variant: "destructive",
+          });
+          setAvatarFile(null);
+        } finally {
+          setIsUploadingAvatar(false);
+        }
+      }
+    },
+    [lead, currentWorkspace, onUpdate, toast],
+  );
+
+  const handleAvatarRemove = useCallback(() => {
+    if (!lead) return;
+    setAvatarFile(null);
+    onUpdate(lead.id, { avatarUrl: undefined });
+  }, [lead, onUpdate]);
+
+  const handleResponsibleChange = useCallback(
+    async (responsibleIds: string[]) => {
+      if (!lead) return;
+      await onUpdate(lead.id, { responsibleIds });
+    },
+    [lead, onUpdate],
+  );
+
+  return {
+    // Estados
+    avatarFile,
+    isUploadingAvatar,
+    activeTab,
+    setActiveTab,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    isActioning,
+    messages,
+    activities,
+    // Valores derivados
+    isArchived,
+    customFields,
+    getCustomFieldValue,
+    customFieldValues,
+    currentUser,
+    // Handlers
+    handleClose,
+    handleArchive,
+    handleRestore,
+    handleDelete,
+    handleCustomFieldChange,
+    handleAvatarChange,
+    handleAvatarRemove,
+    handleResponsibleChange,
+  };
+}
