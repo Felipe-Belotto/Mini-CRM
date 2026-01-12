@@ -518,7 +518,7 @@ Para dúvidas ou sugestões, entre em contato através do repositório.
 
 ## 🎥 Apresentação em Vídeo
 
-[Link do vídeo de apresentação será adicionado aqui]
+[[Link do vídeo de apresentação será adicionado aqui](https://www.youtube.com/watch?v=AuJEMz_NUc0)]
 
 ---
 
