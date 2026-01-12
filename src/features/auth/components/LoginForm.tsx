@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { loginAction } from "../actions/auth";
@@ -13,7 +21,10 @@ import { AlertCircle } from "lucide-react";
 import { resendConfirmationEmailAction } from "../actions/auth";
 import { useToast } from "@/shared/hooks/use-toast";
 
-export function LoginForm() {
+export function LoginForm({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"div">) {
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -99,103 +110,118 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={isLoading}
-          className={errors.email ? "border-destructive" : ""}
-        />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email}</p>
-        )}
-      </div>
+    <div className={cn("flex flex-col gap-6", className)} {...props}>
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">Bem-vindo de volta</CardTitle>
+          <CardDescription>
+            Entre com sua conta para acessar o sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-6">
+              <div className="grid gap-6">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className={errors.email ? "border-destructive" : ""}
+                    required
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className={errors.password ? "border-destructive" : ""}
+                    required
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Senha</Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-          className={errors.password ? "border-destructive" : ""}
-        />
-        {errors.password && (
-          <p className="text-sm text-destructive">{errors.password}</p>
-        )}
-      </div>
+                {confirmationError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <p className="mb-2">{confirmationError}</p>
+                      {email && isValidEmail(email) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            setIsResending(true);
+                            const result = await resendConfirmationEmailAction(email);
+                            if (result.success) {
+                              toast({
+                                title: "Email reenviado!",
+                                description: "Verifique sua caixa de entrada e spam",
+                              });
+                            } else {
+                              toast({
+                                title: "Erro ao reenviar",
+                                description: result.error || "Não foi possível reenviar o email",
+                                variant: "destructive",
+                              });
+                            }
+                            setIsResending(false);
+                          }}
+                          disabled={isResending}
+                          className="mt-2"
+                        >
+                          {isResending ? "Reenviando..." : "Reenviar email de confirmação"}
+                        </Button>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-      {confirmationError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <p className="mb-2">{confirmationError}</p>
-            {email && isValidEmail(email) && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  setIsResending(true);
-                  const result = await resendConfirmationEmailAction(email);
-                  if (result.success) {
-                    toast({
-                      title: "Email reenviado!",
-                      description: "Verifique sua caixa de entrada e spam",
-                    });
-                  } else {
-                    toast({
-                      title: "Erro ao reenviar",
-                      description: result.error || "Não foi possível reenviar o email",
-                      variant: "destructive",
-                    });
+                {errors.general && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <p className="text-sm">{errors.general}</p>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Entrando..." : "Entrar"}
+                </Button>
+              </div>
+              <div className="text-center text-sm">
+                Não tem uma conta?{" "}
+                <Link
+                  href={
+                    searchParams.get("invite")
+                      ? `/signup?invite=${encodeURIComponent(searchParams.get("invite")!)}`
+                      : "/signup"
                   }
-                  setIsResending(false);
-                }}
-                disabled={isResending}
-                className="mt-2"
-              >
-                {isResending ? "Reenviando..." : "Reenviar email de confirmação"}
-              </Button>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {errors.general && (
-        <div className="rounded-md bg-destructive/15 p-3">
-          <p className="text-sm text-destructive">{errors.general}</p>
-        </div>
-      )}
-
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
-        {isLoading ? "Entrando..." : "Entrar"}
-      </Button>
-
-      <div className="text-center text-sm text-foreground">
-        Não tem uma conta?{" "}
-        <Link
-          href={
-            searchParams.get("invite")
-              ? `/signup?invite=${encodeURIComponent(searchParams.get("invite")!)}`
-              : "/signup"
-          }
-          className="text-primary hover:underline font-medium"
-        >
-          Cadastre-se
-        </Link>
-      </div>
-    </form>
+                  className="underline underline-offset-4 hover:text-primary"
+                >
+                  Cadastre-se
+                </Link>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -16,7 +16,6 @@ const initialFormData: CampaignFormData = {
   context: "",
   voiceTone: "neutro",
   aiInstructions: "",
-  status: "active",
   triggerStage: undefined,
   formalityLevel: undefined,
 };

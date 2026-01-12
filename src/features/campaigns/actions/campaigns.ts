@@ -1,8 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/shared/lib/supabase/server";
 import { requireAuth, hasWorkspaceAccess } from "@/shared/lib/supabase/utils";
 import type { Campaign, CampaignRow, KanbanStage } from "@/shared/types/crm";
+import type { CampaignFormData } from "../lib/campaign-utils";
 
 /**
  * Mapeia dados do banco para o tipo Campaign
@@ -41,7 +43,7 @@ export async function addCampaignActionVoid(
  * Server Action para criar campanha a partir de form data (obtém workspace atual automaticamente)
  */
 export async function addCampaignFromFormAction(
-  formData: Omit<Campaign, "id" | "createdAt" | "leadsCount" | "workspaceId">,
+  formData: CampaignFormData,
 ): Promise<void> {
   const { getCurrentWorkspace } = await import("@/shared/lib/workspace-utils");
   const currentWorkspace = await getCurrentWorkspace();
@@ -52,6 +54,7 @@ export async function addCampaignFromFormAction(
 
   const campaign: Omit<Campaign, "id" | "createdAt" | "leadsCount"> = {
     ...formData,
+    status: formData.status || "active", // Sempre "active" se não especificado
     workspaceId: currentWorkspace.id,
   };
   
@@ -95,6 +98,8 @@ export async function addCampaignAction(
       console.error("Error creating campaign:", error);
       throw new Error(error?.message || "Não foi possível criar a campanha");
     }
+
+    revalidatePath("/campanhas");
 
     return mapDbCampaignToCampaign(dbCampaign, 0);
   } catch (error) {
@@ -252,6 +257,8 @@ export async function updateCampaignAction(
       console.error("Error updating campaign:", error);
       throw new Error(error.message || "Não foi possível atualizar a campanha");
     }
+
+    revalidatePath("/campanhas");
   } catch (error) {
     console.error("Error in updateCampaignAction:", error);
     throw error;
@@ -293,6 +300,8 @@ export async function deleteCampaignAction(campaignId: string): Promise<void> {
       console.error("Error deleting campaign:", error);
       throw new Error(error.message || "Não foi possível deletar a campanha");
     }
+
+    revalidatePath("/campanhas");
   } catch (error) {
     console.error("Error in deleteCampaignAction:", error);
     throw error;

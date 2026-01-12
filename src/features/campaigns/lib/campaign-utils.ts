@@ -6,7 +6,7 @@ export interface CampaignFormData {
   context: string;
   voiceTone: "formal" | "informal" | "neutro";
   aiInstructions: string;
-  status: "active" | "paused" | "finished";
+  status?: "active" | "paused" | "finished"; // Opcional: sempre "active" na criação
   triggerStage?: KanbanStage;
   formalityLevel?: number;
 }

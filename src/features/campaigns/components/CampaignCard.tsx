@@ -1,6 +1,8 @@
 "use client";
 
+import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,22 +14,42 @@ import { getCampaignStatusColorClass } from "../lib/campaign-utils";
 
 interface CampaignCardProps {
   campaign: Campaign;
+  onEdit: (campaign: Campaign) => void;
+  onDelete: (campaign: Campaign) => void;
 }
 
-export function CampaignCard({ campaign }: CampaignCardProps) {
+export function CampaignCard({ campaign, onEdit, onDelete }: CampaignCardProps) {
   return (
     <Card className="metric-card hover:border-accent/30">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-base font-semibold">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-base font-semibold flex-1">
             {campaign.name}
           </CardTitle>
-          <Badge
-            variant="outline"
-            className={getCampaignStatusColorClass(campaign.status)}
-          >
-            {campaign.status === "active" ? "Ativa" : campaign.status === "paused" ? "Pausada" : "Finalizada"}
-          </Badge>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge
+              variant="outline"
+              className={getCampaignStatusColorClass(campaign.status)}
+            >
+              {campaign.status === "active" ? "Ativa" : campaign.status === "paused" ? "Pausada" : "Finalizada"}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onEdit(campaign)}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onDelete(campaign)}
+            >
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
