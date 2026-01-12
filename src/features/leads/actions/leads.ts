@@ -1,19 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/shared/lib/supabase/server";
-import { requireAuth, hasWorkspaceAccess, getCurrentUser } from "@/shared/lib/supabase/utils";
-import { validateLeadForStage } from "@/shared/lib/lead-utils";
-import { getCurrentWorkspace } from "@/shared/lib/workspace-utils";
 import { createActivity } from "@/features/activities/lib/activity-utils";
-import { KANBAN_COLUMNS } from "@/shared/types/crm";
+import { validateLeadForStage } from "@/shared/lib/lead-utils";
+import { createClient } from "@/shared/lib/supabase/server";
+import {
+  getCurrentUser,
+  hasWorkspaceAccess,
+  requireAuth,
+} from "@/shared/lib/supabase/utils";
+import { getCurrentWorkspace } from "@/shared/lib/workspace-utils";
 import type {
   KanbanStage,
   Lead,
   LeadRow,
-  ValidationError,
   PipelineConfig,
+  ValidationError,
 } from "@/shared/types/crm";
+import { KANBAN_COLUMNS } from "@/shared/types/crm";
 import { isLeadEligibleForPromotion } from "../lib/lead-utils";
 
 export interface PromoteLeadsResult {
@@ -34,7 +38,7 @@ async function triggerAutoMessageGeneration(
 ): Promise<void> {
   try {
     const supabase = await createClient();
-    
+
     // Buscar campanhas ativas com trigger_stage correspondente à etapa
     const { data: triggerCampaigns, error: campaignsError } = await supabase
       .from("campaigns")
@@ -45,16 +49,23 @@ async function triggerAutoMessageGeneration(
 
     // Gerar mensagens automaticamente em background (não bloqueia a resposta)
     if (!campaignsError && triggerCampaigns && triggerCampaigns.length > 0) {
-      const { generateAutoMessagesForLeadAction } = await import("@/features/ai-messages/actions/ai-messages");
-      
+      const { generateAutoMessagesForLeadAction } = await import(
+        "@/features/ai-messages/actions/ai-messages"
+      );
+
       // Processar em background sem bloquear
       Promise.all(
-        triggerCampaigns.map(campaign =>
-          generateAutoMessagesForLeadAction(leadId, campaign.id).catch(err =>
-            console.error(`Error generating auto messages for lead ${leadId} and campaign ${campaign.id}:`, err)
-          )
-        )
-      ).catch(err => console.error("Error in background message generation:", err));
+        triggerCampaigns.map((campaign) =>
+          generateAutoMessagesForLeadAction(leadId, campaign.id).catch((err) =>
+            console.error(
+              `Error generating auto messages for lead ${leadId} and campaign ${campaign.id}:`,
+              err,
+            ),
+          ),
+        ),
+      ).catch((err) =>
+        console.error("Error in background message generation:", err),
+      );
     }
   } catch (error) {
     // Não propagar erro - geração automática não deve bloquear operações principais
@@ -69,7 +80,7 @@ export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> 
   try {
     await requireAuth();
     const currentWorkspace = await getCurrentWorkspace();
-    
+
     if (!currentWorkspace) {
       return {
         success: false,
@@ -111,7 +122,7 @@ export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> 
 
     // Mapear e filtrar leads elegíveis
     const eligibleLeadIds: string[] = [];
-    
+
     for (const dbLead of baseLeads) {
       const lead = mapDbLeadToLead(dbLead);
       if (isLeadEligibleForPromotion(lead)) {
@@ -144,7 +155,7 @@ export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> 
     }
 
     const currentUser = await getCurrentUser();
-    
+
     for (const leadId of eligibleLeadIds) {
       await createActivity({
         leadId,
@@ -157,12 +168,19 @@ export async function promoteEligibleLeadsAction(): Promise<PromoteLeadsResult> 
           oldStageName: "Base",
           newStageName: "Lead Mapeado",
         },
-      }).catch(err => console.error("Error creating activity:", err));
+      }).catch((err) => console.error("Error creating activity:", err));
     }
 
     // Gerar mensagens automaticamente para cada lead promovido (usa função auxiliar)
+    // Processar em background sem bloquear a resposta
     for (const leadId of eligibleLeadIds) {
-      triggerAutoMessageGeneration(leadId, "lead_mapeado", workspaceId);
+      triggerAutoMessageGeneration(leadId, "lead_mapeado", workspaceId).catch(
+        (err) =>
+          console.error(
+            `Error triggering auto message generation for lead ${leadId}:`,
+            err,
+          ),
+      );
     }
 
     revalidatePath("/pipeline");
@@ -207,7 +225,7 @@ function mapDbLeadToLead(dbLead: LeadWithResponsibles): Lead {
     avatarUrl: dbLead.avatar_url || undefined,
     stage: dbLead.stage as KanbanStage,
     campaignId: dbLead.campaign_id || undefined,
-    responsibleIds: dbLead.lead_responsibles?.map(r => r.user_id) || [],
+    responsibleIds: dbLead.lead_responsibles?.map((r) => r.user_id) || [],
     workspaceId: dbLead.workspace_id,
     sortOrder: dbLead.sort_order,
     createdAt: new Date(dbLead.created_at),
@@ -234,7 +252,10 @@ export async function createLeadAction(
     const supabase = await createClient();
 
     // Obter o próximo sort_order para a coluna
-    const nextSortOrder = await getNextSortOrderAction(lead.workspaceId, lead.stage);
+    const nextSortOrder = await getNextSortOrderAction(
+      lead.workspaceId,
+      lead.stage,
+    );
 
     // Criar lead no banco
     const { data: dbLead, error } = await supabase
@@ -267,7 +288,7 @@ export async function createLeadAction(
 
     // Inserir responsáveis na tabela de relacionamento
     if (lead.responsibleIds && lead.responsibleIds.length > 0) {
-      const responsiblesData = lead.responsibleIds.map(userId => ({
+      const responsiblesData = lead.responsibleIds.map((userId) => ({
         lead_id: dbLead.id,
         user_id: userId,
       }));
@@ -341,7 +362,12 @@ export async function updateLeadAction(
 
     // Preparar updates para o banco e rastrear alterações
     const dbUpdates: Record<string, unknown> = {};
-    const fieldChanges: Array<{ field: string; oldValue: unknown; newValue: unknown; label: string }> = [];
+    const fieldChanges: Array<{
+      field: string;
+      oldValue: unknown;
+      newValue: unknown;
+      label: string;
+    }> = [];
 
     const fieldLabels: Record<string, string> = {
       name: "Nome",
@@ -361,55 +387,144 @@ export async function updateLeadAction(
 
     if (updates.name !== undefined && updates.name !== existingLead.name) {
       dbUpdates.name = updates.name;
-      fieldChanges.push({ field: "name", oldValue: existingLead.name, newValue: updates.name, label: fieldLabels.name });
+      fieldChanges.push({
+        field: "name",
+        oldValue: existingLead.name,
+        newValue: updates.name,
+        label: fieldLabels.name,
+      });
     }
     if (updates.email !== undefined && updates.email !== existingLead.email) {
       dbUpdates.email = updates.email;
-      fieldChanges.push({ field: "email", oldValue: existingLead.email, newValue: updates.email, label: fieldLabels.email });
+      fieldChanges.push({
+        field: "email",
+        oldValue: existingLead.email,
+        newValue: updates.email,
+        label: fieldLabels.email,
+      });
     }
     if (updates.phone !== undefined && updates.phone !== existingLead.phone) {
       dbUpdates.phone = updates.phone;
-      fieldChanges.push({ field: "phone", oldValue: existingLead.phone, newValue: updates.phone, label: fieldLabels.phone });
+      fieldChanges.push({
+        field: "phone",
+        oldValue: existingLead.phone,
+        newValue: updates.phone,
+        label: fieldLabels.phone,
+      });
     }
-    if (updates.position !== undefined && updates.position !== existingLead.position) {
+    if (
+      updates.position !== undefined &&
+      updates.position !== existingLead.position
+    ) {
       dbUpdates.position = updates.position;
-      fieldChanges.push({ field: "position", oldValue: existingLead.position, newValue: updates.position, label: fieldLabels.position });
+      fieldChanges.push({
+        field: "position",
+        oldValue: existingLead.position,
+        newValue: updates.position,
+        label: fieldLabels.position,
+      });
     }
-    if (updates.company !== undefined && updates.company !== existingLead.company) {
+    if (
+      updates.company !== undefined &&
+      updates.company !== existingLead.company
+    ) {
       dbUpdates.company = updates.company;
-      fieldChanges.push({ field: "company", oldValue: existingLead.company, newValue: updates.company, label: fieldLabels.company });
+      fieldChanges.push({
+        field: "company",
+        oldValue: existingLead.company,
+        newValue: updates.company,
+        label: fieldLabels.company,
+      });
     }
-    if (updates.origin !== undefined && updates.origin !== existingLead.origin) {
+    if (
+      updates.origin !== undefined &&
+      updates.origin !== existingLead.origin
+    ) {
       dbUpdates.origin = updates.origin ?? null;
-      fieldChanges.push({ field: "origin", oldValue: existingLead.origin, newValue: updates.origin, label: fieldLabels.origin });
+      fieldChanges.push({
+        field: "origin",
+        oldValue: existingLead.origin,
+        newValue: updates.origin,
+        label: fieldLabels.origin,
+      });
     }
-    if (updates.segment !== undefined && updates.segment !== existingLead.segment) {
+    if (
+      updates.segment !== undefined &&
+      updates.segment !== existingLead.segment
+    ) {
       dbUpdates.segment = updates.segment ?? null;
-      fieldChanges.push({ field: "segment", oldValue: existingLead.segment, newValue: updates.segment, label: fieldLabels.segment });
+      fieldChanges.push({
+        field: "segment",
+        oldValue: existingLead.segment,
+        newValue: updates.segment,
+        label: fieldLabels.segment,
+      });
     }
-    if (updates.revenue !== undefined && updates.revenue !== existingLead.revenue) {
+    if (
+      updates.revenue !== undefined &&
+      updates.revenue !== existingLead.revenue
+    ) {
       dbUpdates.revenue = updates.revenue ?? null;
-      fieldChanges.push({ field: "revenue", oldValue: existingLead.revenue, newValue: updates.revenue, label: fieldLabels.revenue });
+      fieldChanges.push({
+        field: "revenue",
+        oldValue: existingLead.revenue,
+        newValue: updates.revenue,
+        label: fieldLabels.revenue,
+      });
     }
-    if (updates.linkedIn !== undefined && updates.linkedIn !== existingLead.linkedin) {
+    if (
+      updates.linkedIn !== undefined &&
+      updates.linkedIn !== existingLead.linkedin
+    ) {
       dbUpdates.linkedin = updates.linkedIn ?? null;
-      fieldChanges.push({ field: "linkedIn", oldValue: existingLead.linkedin, newValue: updates.linkedIn, label: fieldLabels.linkedIn });
+      fieldChanges.push({
+        field: "linkedIn",
+        oldValue: existingLead.linkedin,
+        newValue: updates.linkedIn,
+        label: fieldLabels.linkedIn,
+      });
     }
     if (updates.notes !== undefined && updates.notes !== existingLead.notes) {
       dbUpdates.notes = updates.notes ?? null;
-      fieldChanges.push({ field: "notes", oldValue: existingLead.notes, newValue: updates.notes, label: fieldLabels.notes });
+      fieldChanges.push({
+        field: "notes",
+        oldValue: existingLead.notes,
+        newValue: updates.notes,
+        label: fieldLabels.notes,
+      });
     }
-    if (updates.avatarUrl !== undefined && updates.avatarUrl !== existingLead.avatar_url) {
+    if (
+      updates.avatarUrl !== undefined &&
+      updates.avatarUrl !== existingLead.avatar_url
+    ) {
       dbUpdates.avatar_url = updates.avatarUrl ?? null;
-      fieldChanges.push({ field: "avatarUrl", oldValue: existingLead.avatar_url, newValue: updates.avatarUrl, label: fieldLabels.avatarUrl });
+      fieldChanges.push({
+        field: "avatarUrl",
+        oldValue: existingLead.avatar_url,
+        newValue: updates.avatarUrl,
+        label: fieldLabels.avatarUrl,
+      });
     }
     if (updates.stage !== undefined && updates.stage !== existingLead.stage) {
       dbUpdates.stage = updates.stage;
-      fieldChanges.push({ field: "stage", oldValue: existingLead.stage, newValue: updates.stage, label: fieldLabels.stage });
+      fieldChanges.push({
+        field: "stage",
+        oldValue: existingLead.stage,
+        newValue: updates.stage,
+        label: fieldLabels.stage,
+      });
     }
-    if (updates.campaignId !== undefined && updates.campaignId !== existingLead.campaign_id) {
+    if (
+      updates.campaignId !== undefined &&
+      updates.campaignId !== existingLead.campaign_id
+    ) {
       dbUpdates.campaign_id = updates.campaignId ?? null;
-      fieldChanges.push({ field: "campaignId", oldValue: existingLead.campaign_id, newValue: updates.campaignId, label: fieldLabels.campaignId });
+      fieldChanges.push({
+        field: "campaignId",
+        oldValue: existingLead.campaign_id,
+        newValue: updates.campaignId,
+        label: fieldLabels.campaignId,
+      });
     }
 
     // Atualizar lead no banco (se houver campos para atualizar)
@@ -441,14 +556,11 @@ export async function updateLeadAction(
     // Atualizar responsáveis se fornecido
     if (updates.responsibleIds !== undefined) {
       // Remover todos os responsáveis atuais
-      await supabase
-        .from("lead_responsibles")
-        .delete()
-        .eq("lead_id", id);
+      await supabase.from("lead_responsibles").delete().eq("lead_id", id);
 
       // Inserir novos responsáveis
       if (updates.responsibleIds.length > 0) {
-        const responsiblesData = updates.responsibleIds.map(userId => ({
+        const responsiblesData = updates.responsibleIds.map((userId) => ({
           lead_id: id,
           user_id: userId,
         }));
@@ -462,8 +574,14 @@ export async function updateLeadAction(
         }
       }
 
-      const oldResponsibles = existingLead.lead_responsibles?.map((r: { user_id: string }) => r.user_id) || [];
-      if (JSON.stringify(oldResponsibles.sort()) !== JSON.stringify([...updates.responsibleIds].sort())) {
+      const oldResponsibles =
+        existingLead.lead_responsibles?.map(
+          (r: { user_id: string }) => r.user_id,
+        ) || [];
+      if (
+        JSON.stringify(oldResponsibles.sort()) !==
+        JSON.stringify([...updates.responsibleIds].sort())
+      ) {
         await createActivity({
           leadId: id,
           workspaceId: existingLead.workspace_id,
@@ -525,7 +643,9 @@ export async function moveLeadAction(
     }
 
     // Obter o próximo sort_order para a nova coluna se não foi fornecido
-    const sortOrder = newSortOrder ?? await getNextSortOrderAction(dbLead.workspace_id, newStage);
+    const sortOrder =
+      newSortOrder ??
+      (await getNextSortOrderAction(dbLead.workspace_id, newStage));
 
     const oldStage = lead.stage;
 
@@ -541,9 +661,11 @@ export async function moveLeadAction(
     }
 
     const currentUser = await getCurrentUser();
-    const oldStageName = KANBAN_COLUMNS.find(c => c.id === oldStage)?.title || oldStage;
-    const newStageName = KANBAN_COLUMNS.find(c => c.id === newStage)?.title || newStage;
-    
+    const oldStageName =
+      KANBAN_COLUMNS.find((c) => c.id === oldStage)?.title || oldStage;
+    const newStageName =
+      KANBAN_COLUMNS.find((c) => c.id === newStage)?.title || newStage;
+
     await createActivity({
       leadId,
       workspaceId: dbLead.workspace_id,
@@ -572,9 +694,7 @@ export async function moveLeadAction(
 /**
  * Server Action para buscar leads de um workspace
  */
-export async function getLeadsAction(
-  workspaceId: string,
-): Promise<Lead[]> {
+export async function getLeadsAction(workspaceId: string): Promise<Lead[]> {
   try {
     // Verificar autenticação e acesso ao workspace
     await requireAuth();
@@ -626,7 +746,10 @@ export async function getLeadsAction(
     const leadsWithCounts = dbLeads.map((lead) => {
       const messagesCount = messagesCountMap.get(lead.id) || 0;
       // Converter contagem para formato JSON array para compatibilidade com countJsonArray
-      const messagesJson = messagesCount > 0 ? JSON.stringify(Array(messagesCount).fill(null)) : null;
+      const messagesJson =
+        messagesCount > 0
+          ? JSON.stringify(Array(messagesCount).fill(null))
+          : null;
       return {
         ...lead,
         messages: messagesJson || lead.messages,
@@ -643,9 +766,7 @@ export async function getLeadsAction(
 /**
  * Server Action para buscar lead por ID
  */
-export async function getLeadByIdAction(
-  leadId: string,
-): Promise<Lead | null> {
+export async function getLeadByIdAction(leadId: string): Promise<Lead | null> {
   try {
     const supabase = await createClient();
 
@@ -828,7 +949,10 @@ export async function getArchivedLeadsAction(
     const leadsWithCounts = dbLeads.map((lead) => {
       const messagesCount = messagesCountMap.get(lead.id) || 0;
       // Converter contagem para formato JSON array para compatibilidade com countJsonArray
-      const messagesJson = messagesCount > 0 ? JSON.stringify(Array(messagesCount).fill(null)) : null;
+      const messagesJson =
+        messagesCount > 0
+          ? JSON.stringify(Array(messagesCount).fill(null))
+          : null;
       return {
         ...lead,
         messages: messagesJson || lead.messages,

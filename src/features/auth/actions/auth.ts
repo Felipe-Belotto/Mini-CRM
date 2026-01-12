@@ -73,10 +73,62 @@ export async function loginAction(
       .eq("id", data.user.id)
       .single();
 
+    // Se o perfil não existe, criar um básico (fallback caso o signup não tenha criado)
     if (profileError || !profile) {
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .insert({
+          id: data.user.id,
+          avatar_url: "/fallback-avatar.webp",
+          on_completed: false,
+        });
+
+      if (insertError) {
+        console.error("Error creating profile:", insertError);
+        return {
+          success: false,
+          error: "Erro ao criar perfil do usuário",
+        };
+      }
+
+      // Buscar o perfil recém-criado
+      const { data: newProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", data.user.id)
+        .single();
+
+      if (!newProfile) {
+        return {
+          success: false,
+          error: "Erro ao recuperar perfil do usuário",
+        };
+      }
+
+      // Usar o perfil recém-criado
+      const fullName = "";
+      const avatarUrl = newProfile.avatar_url || "/fallback-avatar.webp";
+
+      const user: User = {
+        id: newProfile.id,
+        email: data.user.email ?? "",
+        fullName,
+        avatarUrl,
+        phone: newProfile.phone ?? undefined,
+        bio: newProfile.bio ?? undefined,
+        createdAt: new Date(newProfile.created_at),
+      };
+
+      // Verificar se há convites pendentes para este email
+      const { checkPendingInvitesAction } = await import(
+        "@/features/workspaces/actions/invites"
+      );
+      const pendingInvites = await checkPendingInvitesAction();
+
       return {
-        success: false,
-        error: "Perfil do usuário não encontrado",
+        success: true,
+        user,
+        pendingInvites: pendingInvites.length > 0 ? pendingInvites : undefined,
       };
     }
 
@@ -153,8 +205,8 @@ export async function signupAction(
 
     // Se a confirmação de email está habilitada e não há sessão,
     // informar ao usuário que precisa confirmar o email
+    // O perfil será criado quando o usuário confirmar o email e fizer login
     if (!data.session) {
-      // O perfil será criado pelo trigger, mas não podemos fazer login ainda
       return {
         success: false,
         needsEmailConfirmation: true,
@@ -163,20 +215,21 @@ export async function signupAction(
       };
     }
 
+    // Sempre verificar se o perfil existe e criar se necessário
+    // (o trigger foi removido, então sempre criamos no código)
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", data.user.id)
       .single();
 
-    // O perfil é criado pelo trigger, mas pode não ter nome ainda (onboarding)
-    // Retornar sucesso mesmo sem perfil completo, pois o onboarding será feito depois
+    // Se o perfil não existe, criar um básico
     if (profileError || !profile) {
-      // Se o perfil não existe, criar um básico
       const { error: insertError } = await supabase
         .from("profiles")
         .insert({
           id: data.user.id,
+          avatar_url: "/fallback-avatar.webp",
           on_completed: false,
         });
 
@@ -188,6 +241,20 @@ export async function signupAction(
         };
       }
 
+      // Buscar o perfil recém-criado
+      const { data: newProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", data.user.id)
+        .single();
+
+      if (!newProfile) {
+        return {
+          success: false,
+          error: "Erro ao recuperar perfil do usuário",
+        };
+      }
+
       // Retornar usuário básico para redirecionar ao onboarding
       return {
         success: true,
@@ -196,7 +263,7 @@ export async function signupAction(
           email: data.user.email ?? "",
           fullName: "",
           avatarUrl: "/fallback-avatar.webp",
-          createdAt: new Date(),
+          createdAt: new Date(newProfile.created_at),
         },
       };
     }

@@ -8,9 +8,22 @@ import { createClient } from "./server";
 export async function isOnboardingComplete(): Promise<boolean> {
   try {
     const supabase = await createClient();
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+    let authUser = null;
+    
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      
+      // Ignorar erro de refresh token inválido (comportamento esperado quando sessão expira)
+      if (!error) {
+        authUser = user;
+      }
+    } catch (error: unknown) {
+      // Ignorar erros de refresh token silenciosamente
+      return false;
+    }
 
     if (!authUser) {
       return false;

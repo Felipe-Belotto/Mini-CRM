@@ -38,9 +38,22 @@ export async function middleware(request: NextRequest) {
   });
 
   // Atualizar sessão do usuário
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
+  // Silenciosamente ignorar erros de refresh token inválido (sessão expirada)
+  let authUser = null;
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    
+    // Ignorar erro de refresh token inválido (comportamento esperado quando sessão expira)
+    if (!error) {
+      authUser = user;
+    }
+  } catch (error: unknown) {
+    // Ignorar erros de refresh token silenciosamente
+    // O Supabase limpa os cookies automaticamente nesses casos
+  }
 
   // Identificar tipos de rotas
   const isAuthPage =

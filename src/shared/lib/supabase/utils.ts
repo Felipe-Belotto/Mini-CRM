@@ -8,12 +8,25 @@ import type { Tables } from "@/shared/types/supabase";
 export async function getCurrentUser(): Promise<User | null> {
   try {
     const supabase = await createClient();
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let authUser = null;
+    
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      
+      // Ignorar erro de refresh token inválido (comportamento esperado quando sessão expira)
+      if (!authError) {
+        authUser = user;
+      }
+    } catch (error: unknown) {
+      // Ignorar erros de refresh token silenciosamente
+      // O Supabase limpa os cookies automaticamente nesses casos
+      return null;
+    }
 
-    if (authError || !authUser) {
+    if (!authUser) {
       return null;
     }
 
